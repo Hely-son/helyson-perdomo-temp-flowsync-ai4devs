@@ -1,6 +1,7 @@
 import User from '#models/user'
-import { belongsTo } from '@adonisjs/lucid/orm'
+import { beforeFetch, beforeFind, belongsTo } from '@adonisjs/lucid/orm'
 import { TaskSchema } from '#database/schema'
+import type { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 
 /**
@@ -24,7 +25,28 @@ export const DEFAULT_LIST_STATUSES = [
   'in_progress',
 ] as const satisfies readonly TaskStatus[]
 
+/**
+ * Una tarea viva: la que ve la lista, la que se abre, la que se modifica.
+ *
+ * **Lo que está en la papelera no existe para este modelo** (E2-10 CA-8c). No se
+ * consigue acordándose de filtrar en cada consulta, sino al revés: toda lectura que
+ * pase por `Task` —`Task.query()`, `find`, `findOrFail`, `first`, `all`— sale ya sin
+ * lo borrado, y no hay un «incluir borradas» que alguien pueda activar sin querer. Un
+ * endpoint nuevo que consulte `Task` sin pensar en la papelera sigue sin poder
+ * encontrarla.
+ *
+ * Lo borrado se ve y se restaura desde `TrashedTask`, el mismo registro visto desde
+ * el otro lado. Los hooks de Lucid no alcanzan a `update`/`delete` masivos ni a SQL
+ * a mano: la red es esta, y los tests de `tests/functional/tasks/trash.spec.ts` la
+ * recorren por cada ruta de la API.
+ */
 export default class Task extends TaskSchema {
+  @beforeFind()
+  @beforeFetch()
+  static hideTrashed(query: ModelQueryBuilderContract<typeof Task>) {
+    query.whereNull('tasks.deleted_at')
+  }
+
   @belongsTo(() => User, { foreignKey: 'assigneeId' })
   declare assignee: BelongsTo<typeof User>
 

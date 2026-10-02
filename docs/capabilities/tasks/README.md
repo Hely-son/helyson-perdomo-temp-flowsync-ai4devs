@@ -24,11 +24,14 @@ de `POST /api/v1/auth/login` o de `POST /api/v1/auth/signup`.
 | `GET /tasks/:id` | `today=AAAA-MM-DD` en query, **obligatorio** | [`TasksController.show`](../../../backend/app/controllers/tasks_controller.ts) | `200` · la tarea con vencimiento |
 | `PATCH /tasks/:id/status` | `{ "status": "pending \| in_progress \| done" }` | [`TaskStatusesController.update`](../../../backend/app/controllers/task_statuses_controller.ts) | `200` · la tarea ya cambiada |
 | `PUT /tasks/:id/due-date` | `{ "dueDate": "AAAA-MM-DD" \| null, "today": "AAAA-MM-DD" }` | [`TaskDueDatesController.update`](../../../backend/app/controllers/task_due_dates_controller.ts) | `200` · la tarea con vencimiento |
+| `DELETE /tasks/:id` | — | [`TasksController.destroy`](../../../backend/app/controllers/tasks_controller.ts) | `200` · la tarea, ya en la papelera |
+| `GET /tasks/trash` | — | [`TaskTrashController.index`](../../../backend/app/controllers/task_trash_controller.ts) | `200` · la papelera |
+| `POST /tasks/:id/restore` | — | [`TaskTrashController.restore`](../../../backend/app/controllers/task_trash_controller.ts) | `200` · la tarea restaurada, con forma de lista |
 
 Toda respuesta va envuelta en `{ "data": ... }` por el serializer de
 [`providers/api_provider.ts`](../../../backend/providers/api_provider.ts).
 
-### Dos formas de tarea, no una
+### Tres formas de tarea, no una
 
 Son objetos distintos a propósito, no el mismo con campos opcionales:
 
@@ -52,13 +55,23 @@ Son objetos distintos a propósito, no el mismo con campos opcionales:
     "assignee": { "id": 1, "fullName": "Ada Lovelace", "initials": "AL" } }
   ```
 
+- **Tarea en la papelera** — [`TrashedTaskTransformer`](../../../backend/app/transformers/trashed_task_transformer.ts).
+  La devuelven `DELETE /tasks/:id` y `GET /tasks/trash`. Es la de lista más `deletedAt`, y tampoco
+  lleva vencimiento. La tarea viva no tiene `deletedAt`.
+
+  ```json
+  { "id": 1, "title": "Revisar el informe", "status": "pending",
+    "deletedAt": "...", "createdAt": "...", "updatedAt": "...",
+    "assignee": { "id": 1, "fullName": "Ada Lovelace", "initials": "AL" } }
+  ```
+
 El `assignee` sale siempre por
 [`TaskAssigneeTransformer`](../../../backend/app/transformers/task_assignee_transformer.ts), que lo
 recorta a `id`, `fullName` e `initials` — nunca el email.
 
 ### El contrato, servido
 
-Las cinco operaciones están anotadas con los decoradores de `@foadonis/openapi` sobre los propios
+Las ocho operaciones están anotadas con los decoradores de `@foadonis/openapi` sobre los propios
 controladores, así que el documento servido en **`/api.json`** (y la interfaz en `/api`) lleva el
 parámetro `status` con sus tres valores, el `today` obligatorio, los cuerpos de las escrituras y los
 códigos `200`/`201`/`401`/`404`/`422` de cada operación, cada uno con la forma de lo que devuelve.
@@ -95,6 +108,9 @@ qué exige cada una, se abre el enlace de la derecha.
 | El día de referencia lo pone quien mira | `taskReferenceDayValidator`, obligatorio y sin valor por defecto | [El día de referencia lo pone quien mira](../../../openspec/specs/tasks/spec.md#requirement-el-día-de-referencia-lo-pone-quien-mira) |
 | La lista no lleva vencimiento | Dos transformers separados, no uno con campos opcionales | [La lista no lleva el vencimiento](../../../openspec/specs/tasks/spec.md#requirement-la-lista-no-lleva-el-vencimiento) |
 | Acotar por estado | `listTasksValidator` y la rama de `TasksController.index` | [Acotar la lista por estado](../../../openspec/specs/tasks/spec.md#requirement-acotar-la-lista-por-estado) |
+| Borrar manda a la papelera, no quita la fila | `TasksController.destroy`: marca `tasks.deleted_at` (migración `add_deleted_at_to_tasks_table`). Cualquiera con sesión borra cualquier tarea | [change `add-task-trash`](../../../openspec/changes/add-task-trash/specs/tasks/spec.md#requirement-borrar-una-tarea-la-manda-a-la-papelera) |
+| Lo borrado no sale por ningún otro camino | **Por construcción, no por filtro en cada ruta**: `Task` lleva los hooks `before:find`/`before:fetch` (`Task.hideTrashed`) que excluyen lo borrado, y la papelera es otro modelo, `TrashedTask`, que solo ve lo borrado. Lista, filtros, `GET /tasks/:id`, `PATCH .../status` y `PUT .../due-date` lo heredan | [change `add-task-trash`](../../../openspec/changes/add-task-trash/specs/tasks/spec.md#requirement-lo-borrado-no-sale-por-ningún-otro-camino) |
+| Ver y restaurar la papelera | `TaskTrashController.index` / `.restore`. Restaurar quita solo la marca; una tarea que no está en la papelera es un 404 | [change `add-task-trash`](../../../openspec/changes/add-task-trash/specs/tasks/spec.md#requirement-la-papelera-se-consulta-y-se-restaura) |
 | Filtro válido sin resultados ≠ filtro inválido | **Sin cumplir hoy.** `listTasksValidator` declara `status: vine.string().optional()`, no un `vine.enum`, así que un estado inventado no se rechaza: llega al `where` y sale como lista vacía, que es justo lo que el requisito prohíbe. El comentario de `TasksController.index` afirma lo contrario | [Un estado que no existe se rechaza, no se responde vacío](../../../openspec/specs/tasks/spec.md#requirement-un-estado-que-no-existe-se-rechaza-no-se-responde-vacío) |
 
 En el frontend, la capability vive en [`pages/tasks-page.tsx`](../../../frontend/src/pages/tasks-page.tsx),
@@ -126,10 +142,12 @@ node ace test --tests="el responsable llega con su nombre y sus iniciales"
 ```
 
 Los tests de esta capability están en
-[`backend/tests/functional/tasks/`](../../../backend/tests/functional/tasks/). **Hoy solo hay uno**,
-`assignee.spec.ts`, que cubre 3 de los 124 scenarios de la spec: los del requisito *Lo que cada tarea
-muestra de su responsable*. Todo lo demás está sin cubrir, así que el verde de la suite **no** es
-señal de que la capability cumpla su spec.
+[`backend/tests/functional/tasks/`](../../../backend/tests/functional/tasks/). **Hoy hay dos
+ficheros**: `assignee.spec.ts`, que cubre 3 de los 124 scenarios de la spec (los del requisito *Lo que
+cada tarea muestra de su responsable*), y `trash.spec.ts`, con 17 tests de la papelera (E2-10): un test
+por cada criterio de la historia que se puede probar contra la API, y CA-8c recorrido ruta por ruta.
+Todo lo demás está sin cubrir, así que el verde de la suite **no** es señal de que la capability cumpla
+su spec.
 
 Dos cosas que hay que saber antes de escribir un test aquí:
 
@@ -177,6 +195,13 @@ curl -s -X PATCH http://localhost:3333/api/v1/tasks/1/status \
 curl -s -X PUT http://localhost:3333/api/v1/tasks/1/due-date \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
   -d '{"dueDate":"2026-08-19","today":"2026-08-20"}'
+
+# 7. Borrar: va a la papelera y sale de la lista
+curl -s -X DELETE http://localhost:3333/api/v1/tasks/1 -H "Authorization: Bearer $TOKEN"
+
+# 8. La papelera, y restaurar
+curl -s http://localhost:3333/api/v1/tasks/trash -H "Authorization: Bearer $TOKEN"
+curl -s -X POST http://localhost:3333/api/v1/tasks/1/restore -H "Authorization: Bearer $TOKEN"
 ```
 
 Ojo: esto **escribe en la base de datos de desarrollo**. Para dejarla como estaba, `node ace

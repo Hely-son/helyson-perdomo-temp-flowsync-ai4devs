@@ -115,6 +115,40 @@ export class TaskDetail {
 }
 
 /**
+ * Una tarea en la papelera (`TrashedTaskTransformer`): lo que lleva la de la lista y,
+ * además, cuándo se borró. La devuelven el borrado y la papelera.
+ *
+ * Tampoco lleva `dueDate`, igual que la lista; y la tarea viva (`Task`) no lleva
+ * `deletedAt`, porque no puede tenerlo.
+ */
+export class TrashedTask {
+  @ApiProperty({ type: 'number', example: 1 })
+  id!: number
+
+  @ApiProperty({ type: 'string', maxLength: 200, example: 'Revisar el informe' })
+  title!: string
+
+  @ApiProperty({ enum: [...TASK_STATUSES], example: 'pending' })
+  status!: string
+
+  @ApiProperty({ type: () => TaskAssignee })
+  assignee!: TaskAssignee
+
+  @ApiProperty({
+    type: 'string',
+    format: 'date-time',
+    description: 'Cuándo se mandó a la papelera. Siempre presente: una tarea viva no está aquí.',
+  })
+  deletedAt!: string
+
+  @ApiProperty({ type: 'string', format: 'date-time' })
+  createdAt!: string
+
+  @ApiProperty({ type: 'string', format: 'date-time' })
+  updatedAt!: string
+}
+
+/**
  * El envoltorio `{ "data": ... }` que `providers/api_provider.ts` pone a toda
  * respuesta. Se documenta como parte de la forma porque el cliente lo tiene que
  * desenvolver.
@@ -132,6 +166,16 @@ export class TaskListResponse {
 export class TaskDetailResponse {
   @ApiProperty({ type: () => TaskDetail })
   data!: TaskDetail
+}
+
+export class TrashedTaskResponse {
+  @ApiProperty({ type: () => TrashedTask })
+  data!: TrashedTask
+}
+
+export class TrashedTaskListResponse {
+  @ApiProperty({ type: () => [TrashedTask] })
+  data!: TrashedTask[]
 }
 
 /**

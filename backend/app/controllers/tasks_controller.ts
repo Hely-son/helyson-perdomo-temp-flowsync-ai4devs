@@ -8,6 +8,8 @@ import {
 import type { HttpContext } from '@adonisjs/core/http'
 import TaskTransformer from '#transformers/task_transformer'
 import TaskDetailTransformer from '#transformers/task_detail_transformer'
+import TrashedTaskTransformer from '#transformers/trashed_task_transformer'
+import { DateTime } from 'luxon'
 import {
   ApiBearerAuth,
   ApiBody,
@@ -21,6 +23,7 @@ import {
   TaskDetailResponse,
   TaskListResponse,
   TaskResponse,
+  TrashedTaskResponse,
   ValidationErrorResponse,
 } from '#openapi/schemas'
 
@@ -172,5 +175,50 @@ export default class TasksController {
     // `response.created()` deja la respuesta con el cuerpo vacío.
     response.status(201)
     return serialize(TaskTransformer.transform(task))
+  }
+
+  /**
+   * Borrar es mandar a la papelera, no quitar la fila (RF-12 enmendado, PA-2): se
+   * marca `deleted_at` y la tarea deja de existir para todo lo que pasa por `Task`.
+   *
+   * Cualquier persona con sesión puede borrar cualquier tarea, propia o ajena: no se
+   * comprueba quién es el responsable.
+   *
+   * No pide confirmación y no puede pedirla: la confirmación (E2-10 CA-4 a CA-6) es un
+   * gesto de la interfaz, y esta operación es lo que ocurre cuando ya se ha confirmado.
+   *
+   * Borrar dos veces no es un fallo nuevo (CA-11): la segunda no encuentra la tarea,
+   * porque ya está en la papelera, y responde el mismo 404 de «no existe» que
+   * cualquier otra ruta.
+   */
+  @ApiOperation({
+    summary: 'Borrar una tarea (mandarla a la papelera)',
+    description:
+      'Manda la tarea a la papelera: desaparece de la lista, de todos los filtros y de la consulta por identificador para todo el equipo, y no se le puede cambiar el estado ni la fecha. Se recupera con `POST /tasks/{id}/restore`. Cualquier cuenta con sesión puede borrar cualquier tarea. No pide confirmación: eso es de la interfaz.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'La tarea ya en la papelera, con quién la llevaba y cuándo se ha borrado.',
+    type: () => TrashedTaskResponse,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Falta el token o no es válido. No se borra nada.',
+    type: () => ErrorResponse,
+  })
+  @ApiResponse({
+    status: 404,
+    description:
+      'No existe ninguna tarea viva con ese identificador: no existe, o ya está en la papelera (borrarla dos veces no es un error distinto).',
+    type: () => ErrorResponse,
+  })
+  async destroy({ params, serialize }: HttpContext) {
+    const task = await Task.findOrFail(params.id)
+
+    task.deletedAt = DateTime.now()
+    await task.save()
+    await task.load('assignee')
+
+    return serialize(TrashedTaskTransformer.transform(task))
   }
 }

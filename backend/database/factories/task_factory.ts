@@ -141,8 +141,9 @@ function enLosUltimosDias(faker: Faker, dias: number) {
  *   futuro; `updated_at` nunca anterior a `created_at` (el esquema no lo comprueba),
  *   y una tarea que sigue en «Pendiente» no se ha tocado desde que nació.
  *
- * No hay papelera: RF-12 se enmendó para tenerla, pero ninguna migración añade la
- * columna que la represente, así que no hay tareas «borradas» que sembrar.
+ * **Papelera.** Por defecto la tarea nace viva (`deleted_at` nulo). El estado `borrada`
+ * la manda a la papelera; el seeder no lo usa, y los tests sí. Una tarea creada con él
+ * no se ve por `Task`, solo por `TrashedTask` (RF-12 enmendado, E2-10).
  */
 export const TaskFactory = factory
   .define(Task, ({ faker }) => {
@@ -174,6 +175,9 @@ export const TaskFactory = factory
   })
   .state('sinFecha', (task) => {
     task.dueDate = null
+  })
+  .state('borrada', (task) => {
+    task.deletedAt = DateTime.now()
   })
   .state('vencida', (task, { faker }) => {
     if (task.status === 'done') {

@@ -246,6 +246,79 @@
           "data"
         ]
       },
+      "TrashedTaskResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TrashedTask"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TrashedTask": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "example": "Revisar el informe"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "done"
+            ],
+            "example": "pending"
+          },
+          "assignee": {
+            "$ref": "#/components/schemas/TaskAssignee"
+          },
+          "deletedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Cuándo se mandó a la papelera. Siempre presente: una tarea viva no está aquí."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "assignee",
+          "deletedAt",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "TrashedTaskListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrashedTask"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "UpdateTaskStatusBody": {
         "type": "object",
         "properties": {
@@ -566,6 +639,153 @@
               "format": "date"
             }
           },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Borrar una tarea (mandarla a la papelera)",
+        "description": "Manda la tarea a la papelera: desaparece de la lista, de todos los filtros y de la consulta por identificador para todo el equipo, y no se le puede cambiar el estado ni la fecha. Se recupera con `POST /tasks/{id}/restore`. Cualquier cuenta con sesión puede borrar cualquier tarea. No pide confirmación: eso es de la interfaz.",
+        "tags": [
+          "Tasks"
+        ],
+        "responses": {
+          "200": {
+            "description": "La tarea ya en la papelera, con quién la llevaba y cuándo se ha borrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrashedTaskResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o no es válido. No se borra nada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe ninguna tarea viva con ese identificador: no existe, o ya está en la papelera (borrarla dos veces no es un error distinto).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/trash": {
+      "get": {
+        "summary": "La papelera: las tareas borradas",
+        "description": "Devuelve, de la más recientemente borrada a la más antigua, las tareas que están en la papelera, cada una con quién la llevaba y cuándo se borró. Es la misma para cualquier cuenta con sesión. Una tarea restaurada deja de salir aquí. No hay forma de vaciarla.",
+        "tags": [
+          "TaskTrash"
+        ],
+        "responses": {
+          "200": {
+            "description": "La papelera entera. Vacía es una respuesta legítima: `data` es una lista sin filas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrashedTaskListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o no es válido. No se devuelve ninguna tarea.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [],
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/restore": {
+      "post": {
+        "summary": "Restaurar una tarea de la papelera",
+        "description": "Devuelve la tarea a la lista con su título, estado, responsable y fecha de vencimiento intactos, y desaparece de la papelera. Cualquier cuenta con sesión puede restaurar cualquier tarea borrada. Responde con la forma de lista, sin vencimiento.",
+        "tags": [
+          "TaskTrash"
+        ],
+        "responses": {
+          "200": {
+            "description": "La tarea ya restaurada, con la forma de la lista.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token o no es válido. Nada cambia.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No hay ninguna tarea con ese identificador en la papelera: no existe, o está viva y no hay nada que restaurar.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
           {
             "in": "path",
             "name": "id",

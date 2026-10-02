@@ -50,7 +50,11 @@ router
       .group(() => {
         router.get('/', [controllers.Tasks, 'index'])
         router.post('/', [controllers.Tasks, 'store'])
+        // `trash` va antes que `:id`: si no, «trash» se leería como un identificador.
+        router.get('trash', [controllers.TaskTrash, 'index'])
         router.get(':id', [controllers.Tasks, 'show'])
+        router.delete(':id', [controllers.Tasks, 'destroy'])
+        router.post(':id/restore', [controllers.TaskTrash, 'restore'])
         router.patch(':id/status', [controllers.TaskStatuses, 'update'])
         router.put(':id/due-date', [controllers.TaskDueDates, 'update'])
       })
