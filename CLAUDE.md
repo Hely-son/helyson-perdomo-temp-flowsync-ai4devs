@@ -20,6 +20,7 @@ PostgreSQL 17 (`pgvector/pgvector:pg17`, la imagen de producción) en Docker, de
 ```bash
 make db-up        # levanta db y db-test y espera a los healthchecks
 make migrate      # migra LAS DOS (la de pruebas con NODE_ENV=test)
+make seed         # 5 personas y 40 tareas de desarrollo (idempotente, solo en development)
 make test         # db-up + migrate + npm test
 make db-down      # para las dos; la de desarrollo conserva el volumen
 ```
@@ -114,6 +115,10 @@ Rutas actuales (`start/routes.ts`), todas bajo `/api/v1`:
 | POST | `/api/v1/auth/login` | `AccessTokensController.store` | no |
 | GET | `/api/v1/account/profile` | `ProfileController.show` | sí |
 | POST | `/api/v1/account/logout` | `AccessTokensController.destroy` | sí |
+
+### Datos de desarrollo (factories y seeder)
+
+`database/factories/` (`UserFactory`, `TaskFactory`) y `database/seeders/main_seeder.ts`. Las factories cumplen por sí solas las reglas de negocio que el esquema no impone (estado entre los tres del dominio, título presentable, fecha de vencimiento opcional y rara por defecto, nombre obligatorio), y el seeder solo las compone. Las personas son cinco, con correo `nombre.apellido` en el dominio `DOMINIO_DEMO` y la contraseña `PASSWORD_DEMO`, ambos exportados de `user_factory.ts`. El seeder lleva `static environment = ['development']`, es idempotente y reparte las fechas de creación en los últimos 90 días contando desde el momento de lanzarlo.
 
 ### Validación
 

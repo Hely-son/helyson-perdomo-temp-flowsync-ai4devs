@@ -14,7 +14,7 @@ BACKEND  := backend
 FRONTEND := frontend
 
 .DEFAULT_GOAL := help
-.PHONY: help setup start install env db-up db-down migrate test clean
+.PHONY: help setup start install env db-up db-down migrate seed test clean
 
 # La ayuda se genera a partir de los comentarios `## ...` de cada target, para
 # que no haya un segundo listado que mantener a mano y que pueda divergir.
@@ -83,6 +83,12 @@ migrate: db-up ## Migra las dos bases: desarrollo y pruebas
 	@cd $(BACKEND) && node ace migration:run
 	@echo "🗃️  Migrando la base de pruebas..."
 	@cd $(BACKEND) && NODE_ENV=test node ace migration:run
+
+# El seeder solo corre con NODE_ENV=development (static environment) y se puede
+# lanzar varias veces sin duplicar nada. Pasa por `migrate` para no sembrar sobre
+# tablas que no existen.
+seed: migrate ## Siembra la base de desarrollo: 5 personas y 40 tareas
+	@cd $(BACKEND) && node ace db:seed
 
 test: migrate ## Corre los tests del backend contra la base de pruebas
 	@cd $(BACKEND) && npm test
