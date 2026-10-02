@@ -8,6 +8,8 @@ schema: spec-driven
 #     Tech stack: TypeScript, React, Node.js
 #     We use conventional commits
 #     Domain: e-commerce platform
+context: |
+  Las convenciones de base de datos están en docs/convenciones/base-de-datos.md (única fuente): léelas antes de proponer o diseñar cualquier cambio que toque el esquema o los datos.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
@@ -18,6 +20,9 @@ schema: spec-driven
 #       - Always include a "Non-goals" section
 #     tasks:
 #       - Break tasks into chunks of max 2 hours
+rules:
+  design:
+    - "Si el change toca el esquema, el design lleva una sección ## Reversibilidad: en qué rama cae cada migración, cuántas filas toca contado contra la base real, y cómo se vuelve atrás."
 
 # Per-operation guidance (optional)
 # Add advisory guidance for how apply and archive work should be conducted.
