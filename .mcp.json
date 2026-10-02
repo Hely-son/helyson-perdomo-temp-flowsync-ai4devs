@@ -3,6 +3,14 @@
     "atlassian": {
       "type": "http",
       "url": "https://mcp.atlassian.com/v1/mcp/authv2"
+    },
+    "dbhub": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "cd \"$(git rev-parse --show-toplevel)\" || exit 1; pw=$(grep -E '^DB_RO_PASSWORD=' backend/.env | head -n1 | cut -d= -f2-); if [ -z \"$pw\" ]; then echo 'DB_RO_PASSWORD no está en backend/.env' >&2; exit 1; fi; DB_RO_PASSWORD=\"$pw\" exec npx -y @bytebase/dbhub@1.4.0 --config=backend/database/dbhub.toml"
+      ]
     }
   }
 }

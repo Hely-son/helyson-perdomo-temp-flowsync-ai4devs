@@ -28,6 +28,8 @@ make db-down      # para las dos; la de desarrollo conserva el volumen
 
 El SQL del rol de solo lectura está en `backend/database/readonly-role.sql`. Ojo al probarlo: dentro del contenedor la imagen tiene `trust` para `127.0.0.1`, así que una conexión por TCP desde dentro no comprueba la contraseña; hay que conectar desde el host por el puerto 54410. `DB_RO_PASSWORD` la lee solo el Makefile, por eso no está en el schema de `start/env.ts`. Ese rol puede leer **todo** lo de la base, incluidos los hashes de `users` y `auth_access_tokens`: no restaures en ella datos reales (ver `docs/incidencias/INC-0412-tareas-que-no-salen.md`).
 
+Para consultar el esquema real hay un servidor MCP `dbhub` (DBHub 1.4.0 de Bytebase) en `.mcp.json`, configurado en `backend/database/dbhub.toml`: se conecta como `flowsync_ro`, con `execute_sql` en `readonly = true` y `search_objects` declarada (al listar alguna herramienta, DBHub desactiva las demás). La contraseña no está en ningún fichero: el lanzador de `.mcp.json` la lee de `backend/.env` y la pasa solo al proceso de DBHub, que sustituye `${DB_RO_PASSWORD}`. Necesita `make db-up` y `make db-readonly` hechos antes, y Node >= 22.5.
+
 La suite apunta a `db-test` por `backend/.env.test`, que AdonisJS carga solo con `NODE_ENV=test` y que pisa a `.env`. Como `db-test` es efímera, tras un `db-down` hay que volver a migrarla (`make migrate`).
 
 ### Backend (`cd backend`)

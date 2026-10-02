@@ -1,0 +1,36 @@
+# Configuración de DBHub (Bytebase) para que un agente consulte el esquema real de la
+# base de desarrollo. Lo arranca .mcp.json; no se lanza a mano.
+#
+# - Se conecta con `flowsync_ro` (SELECT y nada más, ver readonly-role.sql), nunca con
+#   el dueño de la base.
+# - La contraseña NO está aquí: DBHub sustituye `${DB_RO_PASSWORD}` desde el entorno de su
+#   proceso, y el lanzador de .mcp.json la saca de backend/.env. Ojo: si la variable no
+#   existe, DBHub deja el texto `${DB_RO_PASSWORD}` tal cual y la conexión falla con
+#   «autenticación fallida», sin decir que faltaba la variable.
+
+[[sources]]
+id = "flowsync"
+type = "postgres"
+host = "localhost"
+port = 54410
+database = "flowsync"
+user = "flowsync_ro"
+password = "${DB_RO_PASSWORD}"
+# Postgres local en Docker, sin TLS.
+sslmode = "disable"
+
+# Ojo: en cuanto una fuente declara alguna herramienta, DBHub activa SOLO las que se
+# listan (sin [[tools]] activaría execute_sql y search_objects). Por eso search_objects
+# va declarada: es la que lista tablas, columnas e índices.
+
+# SQL libre, pero que DBHub rechace cualquier cosa que no sea lectura. Es una segunda
+# barrera: la primera es que el rol no tiene privilegios de escritura.
+[[tools]]
+name = "execute_sql"
+source = "flowsync"
+readonly = true
+
+# Explorar el esquema (tablas, columnas, índices). Siempre de solo lectura.
+[[tools]]
+name = "search_objects"
+source = "flowsync"
