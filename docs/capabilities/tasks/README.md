@@ -112,7 +112,8 @@ empiezan por «La interfaz SHALL…».
 cd backend
 npm install
 cp .env.example .env && node ace generate:key   # solo la primera vez
-node ace migration:run                          # crea tmp/db.sqlite3
+make -C .. db-up                                # levanta PostgreSQL (db y db-test) en Docker
+node ace migration:run                          # migra la base de desarrollo
 ```
 
 ### Tests automáticos
@@ -132,11 +133,11 @@ señal de que la capability cumpla su spec.
 
 Dos cosas que hay que saber antes de escribir un test aquí:
 
-- La suite functional pega contra **el mismo fichero SQLite que el servidor de desarrollo**:
-  [`config/database.ts`](../../../backend/config/database.ts) declara una sola conexión sin override
-  por entorno. Aísla siempre con `testUtils.db().withGlobalTransaction()` en un `group.each.setup`,
-  como hacen los tests existentes. **No** uses truncate: se llevaría por delante los datos con los que
-  estés trabajando.
+- La suite functional pega contra **`db-test`**, una base PostgreSQL aparte y efímera (puerto 54411,
+  la selecciona `.env.test`), no contra la de desarrollo. Aun así, aísla con
+  `testUtils.db().withGlobalTransaction()` en un `group.each.setup`, como hacen los tests existentes,
+  para que el estado no se filtre de un test a otro. Antes de correrla, `make migrate` (la base de
+  pruebas está vacía tras cada `make db-down`).
 - Un test por scenario, citando el requisito en la cabecera del fichero. Es lo que permite leer la
   spec y saber qué falta.
 

@@ -24,4 +24,11 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   // Session
   SESSION_DRIVER: Env.schema.enum(['cookie', 'memory', 'database'] as const),
+
+  // Base de datos (PostgreSQL en Docker, ver compose.yaml en la raíz)
+  DB_HOST: Env.schema.string(),
+  DB_PORT: Env.schema.number(),
+  DB_USER: Env.schema.string(),
+  DB_PASSWORD: Env.schema.secret(),
+  DB_DATABASE: Env.schema.string(),
 })

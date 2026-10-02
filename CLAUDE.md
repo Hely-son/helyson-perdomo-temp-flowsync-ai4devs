@@ -4,21 +4,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Qué es este repo
 
-FlowSync: proyecto de práctica del curso (gestión de tareas en equipo). Monorepo sin workspaces ni `package.json` raíz — **todos los comandos se ejecutan desde `backend/` o desde `frontend/`**.
+FlowSync: proyecto de práctica del curso (gestión de tareas en equipo). Monorepo sin workspaces ni `package.json` raíz — **los comandos de Node se ejecutan desde `backend/` o desde `frontend/`**; los de Docker y los atajos del `Makefile`, desde la raíz.
 
-- `backend/` — API AdonisJS 7 + Lucid 22 + SQLite, escucha en `http://localhost:3333`
+- `backend/` — API AdonisJS 7 + Lucid 22 + PostgreSQL 17 (Docker), escucha en `http://localhost:3333`
 - `frontend/` — React 19 + Vite 8, escucha en `http://localhost:5173`
 
 La rama `s1/start` es el punto de partida de los alumnos; `main` es la base del repo cliente.
 
 ## Comandos
 
+### Bases de datos (desde la raíz)
+
+PostgreSQL 17 (`pgvector/pgvector:pg17`, la imagen de producción) en Docker, definido en `compose.yaml`: servicio `db` (desarrollo, puerto **54410**, con volumen) y `db-test` (pruebas, puerto **54411**, `tmpfs` y sin volumen: se vacía al pararlo). Los dos tienen healthcheck por TCP y `make db-up` espera a que estén sanos. No uses el 5432 ni pongas `version:` en el fichero.
+
+```bash
+make db-up        # levanta db y db-test y espera a los healthchecks
+make migrate      # migra LAS DOS (la de pruebas con NODE_ENV=test)
+make test         # db-up + migrate + npm test
+make db-down      # para las dos; la de desarrollo conserva el volumen
+```
+
+La suite apunta a `db-test` por `backend/.env.test`, que AdonisJS carga solo con `NODE_ENV=test` y que pisa a `.env`. Como `db-test` es efímera, tras un `db-down` hay que volver a migrarla (`make migrate`).
+
 ### Backend (`cd backend`)
 
 ```bash
 npm install
 cp .env.example .env && node ace generate:key   # solo la primera vez
-node ace migration:run                          # crea tmp/db.sqlite3 y regenera database/schema.ts
+node ace migration:run                          # migra la base de desarrollo y regenera database/schema.ts
+NODE_ENV=test node ace migration:run            # ídem contra la de pruebas
 npm run dev                                     # node ace serve --hmr
 npm test                                        # node ace test
 npm run openapi:generate                        # escribe el documento OpenAPI en docs/api/openapi.json
@@ -38,7 +52,7 @@ node ace test --groups=... --tags=... --failed --watch
 node ace make:test --suite=functional # scaffolding de un fichero de test
 ```
 
-Ojo con la BD en tests: `config/database.ts` define una única conexión SQLite apuntando a `app.tmpPath('db.sqlite3')` sin override por entorno, así que las suites functional pegan contra el **mismo fichero** que el servidor de desarrollo. `.env.test` solo cambia `SESSION_DRIVER=memory`. Si añades tests que escriben, aísla con los hooks de `testUtils.db()` (truncate / transacción global) o el estado se filtra entre runs.
+Ojo con la BD en tests: `config/database.ts` define una única conexión `pg` y lo que cambia entre entornos son las variables `DB_*`. `.env.test` apunta a `db-test` (54411, base `flowsync_test`) y cambia `SESSION_DRIVER=memory`, así que las suites ya no tocan los datos de desarrollo. Dentro de la suite, el estado sí se filtra entre tests: si añades tests que escriben, aísla con los hooks de `testUtils.db()` (truncate / transacción global).
 
 Otros comandos útiles: `node ace list:routes`, `node ace make:controller|model|migration|validator|transformer|service`, `node ace migration:fresh`, `node ace repl`.
 
@@ -107,7 +121,7 @@ VineJS 4 en `app/validators/`, consumido con `request.validateUsing(validator)`.
 
 ### Imports por subpath
 
-`package.json` mapea `#controllers/*`, `#models/*`, `#validators/*`, `#transformers/*`, `#database/*`, `#generated/*`, `#start/*`, `#config/*`, `#tests/*`, etc. Úsalos siempre en lugar de rutas relativas. Nuevas variables de entorno: `node ace env:add` (las añade a `.env`, `.env.example` y al schema de `start/env.ts`, que valida al arrancar).
+`package.json` mapea `#controllers/*`, `#models/*`, `#validators/*`, `#transformers/*`, `#database/*`, `#generated/*`, `#start/*`, `#config/*`, `#tests/*`, etc. Úsalos siempre en lugar de rutas relativas. Nuevas variables de entorno: `node ace env:add` (las añade a `.env`, `.env.example` y al schema de `start/env.ts`, que valida al arrancar). `env:add` no sabe de secretos: `DB_PASSWORD` se declaró a mano como `Env.schema.secret()`, y en `config/database.ts` se pasa con `.release()`.
 
 ## Versiones por delante de la documentación conocida
 

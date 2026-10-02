@@ -1,0 +1,51 @@
+# Bases de datos de FlowSync: PostgreSQL 17 con pgvector, la misma imagen que
+# producción. Se levantan con `make db-up`.
+#
+# - `db`: desarrollo, en el puerto 54410, con volumen: sobrevive a `make db-down`.
+# - `db-test`: pruebas, en el puerto 54411, en memoria (tmpfs) y sin volumen: se
+#   vacía cada vez que el contenedor se para. Es a propósito.
+#
+# No se usa el 5432 para no chocar con un Postgres propio ya levantado.
+#
+# El healthcheck pregunta por TCP (`-h 127.0.0.1`), no por el socket Unix: en el
+# primer arranque la imagen levanta un servidor temporal que SOLO escucha en el
+# socket mientras crea la base, y un `pg_isready` por socket diría "sano" antes
+# de tiempo. Por TCP solo responde el servidor definitivo.
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: flowsync
+      POSTGRES_PASSWORD: flowsync
+      POSTGRES_DB: flowsync
+    ports:
+      - '54410:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'flowsync', '-d', 'flowsync']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  db-test:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: flowsync
+      POSTGRES_PASSWORD: flowsync
+      POSTGRES_DB: flowsync_test
+    ports:
+      - '54411:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-h', '127.0.0.1', '-U', 'flowsync', '-d', 'flowsync_test']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+volumes:
+  db-data:

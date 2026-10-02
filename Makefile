@@ -14,7 +14,7 @@ BACKEND  := backend
 FRONTEND := frontend
 
 .DEFAULT_GOAL := help
-.PHONY: help setup start install env migrate clean
+.PHONY: help setup start install env db-up db-down migrate test clean
 
 # La ayuda se genera a partir de los comentarios `## ...` de cada target, para
 # que no haya un segundo listado que mantener a mano y que pueda divergir.
@@ -61,9 +61,31 @@ env:
 		cd $(BACKEND) && node ace generate:key; \
 	fi
 
-migrate:
-	@echo "🗃️  Ejecutando migraciones..."
+# ---------------------------------------------------------------------------
+# bases de datos (PostgreSQL en Docker, ver compose.yaml)
+# ---------------------------------------------------------------------------
+
+# `--wait` bloquea hasta que los dos healthchecks pasan: la imagen crea la base
+# la primera vez y no acepta conexiones mientras tanto.
+db-up: ## Levanta las bases de desarrollo (54410) y de pruebas (54411)
+	@echo "🐘 Levantando PostgreSQL (db y db-test)..."
+	@docker compose up -d --wait db db-test
+
+# Sin `-v`: el volumen de desarrollo se conserva. La de pruebas es tmpfs y se vacía sola.
+db-down: ## Para las bases (la de desarrollo conserva sus datos)
+	@docker compose down
+
+# La de pruebas es efímera: tras un `db-down` está vacía y hay que migrarla otra
+# vez, por eso `test` también pasa por aquí. NODE_ENV=test hace que Adonis cargue
+# .env.test y apunte a db-test.
+migrate: db-up ## Migra las dos bases: desarrollo y pruebas
+	@echo "🗃️  Migrando la base de desarrollo..."
 	@cd $(BACKEND) && node ace migration:run
+	@echo "🗃️  Migrando la base de pruebas..."
+	@cd $(BACKEND) && NODE_ENV=test node ace migration:run
+
+test: migrate ## Corre los tests del backend contra la base de pruebas
+	@cd $(BACKEND) && npm test
 
 # ---------------------------------------------------------------------------
 # start
@@ -91,7 +113,7 @@ migrate:
 # delante a él también. Aislar los servidores en su propio grupo con `set -m`
 # no vale: los dejaría en segundo plano y el primer `read` de stdin les
 # provocaría un SIGTTIN, colgando el "Press h" de Adonis y los atajos de Vite.
-start: ## Levanta backend y frontend a la vez
+start: db-up ## Levanta las bases, el backend y el frontend
 	@if [ ! -d $(BACKEND)/node_modules ] || [ ! -d $(FRONTEND)/node_modules ]; then \
 		echo "❌ Faltan dependencias. Ejecuta primero: make setup"; exit 1; \
 	fi
@@ -112,8 +134,8 @@ start: ## Levanta backend y frontend a la vez
 # clean
 # ---------------------------------------------------------------------------
 
-clean: ## Borra node_modules y la base de datos SQLite
+clean: ## Borra node_modules y las bases de datos (volumen incluido)
 	@echo "🧹 Limpiando..."
 	@rm -rf $(BACKEND)/node_modules $(FRONTEND)/node_modules
-	@rm -f $(BACKEND)/tmp/db.sqlite3 $(BACKEND)/tmp/db.sqlite3-wal $(BACKEND)/tmp/db.sqlite3-shm
+	@docker compose down -v
 	@echo "✅ Listo. Vuelve a ejecutar: make setup"
