@@ -21,9 +21,12 @@ PostgreSQL 17 (`pgvector/pgvector:pg17`, la imagen de producción) en Docker, de
 make db-up        # levanta db y db-test y espera a los healthchecks
 make migrate      # migra LAS DOS (la de pruebas con NODE_ENV=test)
 make seed         # 5 personas y 40 tareas de desarrollo (idempotente, solo en development)
+make db-readonly  # rol flowsync_ro (solo SELECT, también en tablas futuras) en la base de desarrollo; contraseña en DB_RO_PASSWORD
 make test         # db-up + migrate + npm test
 make db-down      # para las dos; la de desarrollo conserva el volumen
 ```
+
+El SQL del rol de solo lectura está en `backend/database/readonly-role.sql`. Ojo al probarlo: dentro del contenedor la imagen tiene `trust` para `127.0.0.1`, así que una conexión por TCP desde dentro no comprueba la contraseña; hay que conectar desde el host por el puerto 54410. `DB_RO_PASSWORD` la lee solo el Makefile, por eso no está en el schema de `start/env.ts`. Ese rol puede leer **todo** lo de la base, incluidos los hashes de `users` y `auth_access_tokens`: no restaures en ella datos reales (ver `docs/incidencias/INC-0412-tareas-que-no-salen.md`).
 
 La suite apunta a `db-test` por `backend/.env.test`, que AdonisJS carga solo con `NODE_ENV=test` y que pisa a `.env`. Como `db-test` es efímera, tras un `db-down` hay que volver a migrarla (`make migrate`).
 

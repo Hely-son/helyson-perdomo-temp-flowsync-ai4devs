@@ -14,7 +14,7 @@ BACKEND  := backend
 FRONTEND := frontend
 
 .DEFAULT_GOAL := help
-.PHONY: help setup start install env db-up db-down migrate seed test clean
+.PHONY: help setup start install env db-up db-down migrate seed db-readonly test clean
 
 # La ayuda se genera a partir de los comentarios `## ...` de cada target, para
 # que no haya un segundo listado que mantener a mano y que pueda divergir.
@@ -89,6 +89,19 @@ migrate: db-up ## Migra las dos bases: desarrollo y pruebas
 # tablas que no existen.
 seed: migrate ## Siembra la base de desarrollo: 5 personas y 40 tareas
 	@cd $(BACKEND) && node ace db:seed
+
+# Rol de solo lectura para que un agente mire la base de desarrollo (no la de pruebas).
+# La contraseña sale de DB_RO_PASSWORD en backend/.env y viaja como variable de entorno
+# del contenedor (`-e RO_PW` sin valor la hereda de este proceso), no como argumento:
+# así no se ve en `ps` ni queda en el SQL. Idempotente: relanzarlo reaplica y rota.
+db-readonly: db-up ## Crea o actualiza flowsync_ro, rol de solo lectura (solo desarrollo)
+	@pw=$$(grep -E '^DB_RO_PASSWORD=' $(BACKEND)/.env | head -n1 | cut -d= -f2-); \
+	if [ -z "$$pw" ]; then \
+		echo "❌ Falta DB_RO_PASSWORD en $(BACKEND)/.env (ejemplo en $(BACKEND)/.env.example)."; exit 1; \
+	fi; \
+	echo "🔒 Aplicando el rol flowsync_ro a la base de desarrollo..."; \
+	RO_PW="$$pw" docker compose exec -T -e RO_PW db \
+		psql -q -U flowsync -d flowsync -f - < $(BACKEND)/database/readonly-role.sql
 
 test: migrate ## Corre los tests del backend contra la base de pruebas
 	@cd $(BACKEND) && npm test
