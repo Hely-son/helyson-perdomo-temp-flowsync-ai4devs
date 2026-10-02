@@ -20,7 +20,10 @@ services:
       POSTGRES_PASSWORD: flowsync
       POSTGRES_DB: flowsync
     ports:
-      - '54410:5432'
+      # Solo loopback: `make copia-produccion` restaura aquí, durante unos minutos,
+      # una copia con datos personales reales. En 0.0.0.0 la vería cualquiera de
+      # la red con la contraseña de desarrollo.
+      - '127.0.0.1:54410:5432'
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

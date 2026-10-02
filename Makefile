@@ -14,7 +14,7 @@ BACKEND  := backend
 FRONTEND := frontend
 
 .DEFAULT_GOAL := help
-.PHONY: help setup start install env db-up db-down migrate seed db-readonly test clean
+.PHONY: help setup start install env db-up db-down migrate seed db-readonly copia-produccion test clean
 
 # La ayuda se genera a partir de los comentarios `## ...` de cada target, para
 # que no haya un segundo listado que mantener a mano y que pueda divergir.
@@ -102,6 +102,17 @@ db-readonly: db-up ## Crea o actualiza flowsync_ro, rol de solo lectura (solo de
 	echo "🔒 Aplicando el rol flowsync_ro a la base de desarrollo..."; \
 	RO_PW="$$pw" docker compose exec -T -e RO_PW db \
 		psql -q -U flowsync -d flowsync -f - < $(BACKEND)/database/readonly-role.sql
+
+# Carga una copia de producción en desarrollo, seudonimizada (INC-0412). SUSTITUYE los
+# datos de users, tasks y auth_access_tokens de la base de desarrollo. Lo lanza una
+# persona: la copia lleva datos personales reales y ningún agente la abre. El camino
+# entero (base intermedia cerrada a flowsync_ro, database/seudonimizar.sql, carga y
+# borrado de la intermedia) está en backend/database/copia-produccion.sh.
+# Otra copia: make copia-produccion COPIA=<ruta>
+COPIA ?= backups/produccion-2026-10-02.dump
+
+copia-produccion: migrate ## Carga la copia de producción SEUDONIMIZADA en desarrollo (sustituye sus datos)
+	@bash $(BACKEND)/database/copia-produccion.sh "$(COPIA)"
 
 test: migrate ## Corre los tests del backend contra la base de pruebas
 	@cd $(BACKEND) && npm test

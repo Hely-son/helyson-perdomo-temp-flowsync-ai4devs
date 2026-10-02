@@ -16,6 +16,9 @@ node_modules/
 **/tmp/*
 !**/tmp/.gitkeep
 
+# Copias de producción (llevan datos personales reales; ver INC-0412)
+backups/
+
 # Cobertura / logs
 coverage/
 *.log

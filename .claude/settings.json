@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "deny": [
+      "Read(**/backups/**)",
+      "Edit(**/backups/**)",
+      "Write(**/backups/**)",
+      "Bash(*backups*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
