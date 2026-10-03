@@ -30,4 +30,4 @@
 
 - [ ] 5.1 La interfaz: pantalla de la papelera, botón de borrar, y la confirmación de CA-4, CA-5, CA-6 y CA-7
 - [ ] 5.2 Vaciar la papelera y decidir cuánto se guarda lo borrado (lo que PA-2 deja abierto)
-- [ ] 5.3 Archivar este change y sincronizar la spec viva (`openspec/specs/tasks/spec.md`)
+- [x] 5.3 Archivar este change y sincronizar la spec viva (`openspec/specs/tasks/spec.md`)
