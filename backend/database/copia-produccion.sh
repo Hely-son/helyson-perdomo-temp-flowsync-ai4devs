@@ -8,6 +8,9 @@
 #      viaja, ya seudonimizado.
 #   3. Pasa `salida` a la base de desarrollo, SUSTITUYENDO users, tasks y los tokens que
 #      hubiera, en una sola transacción: si algo falla, desarrollo queda como estaba.
+#      Si desarrollo ya impone RF-8 (el CHECK `tasks_status_check`), los estados de la
+#      copia se normalizan antes, igual que lo hizo esa migración: la copia es de antes
+#      de la regla y, sin eso, la base la rechaza entera.
 #   4. Borra `flowsync_staging`, también si algo falla por el camino.
 #
 # La copia en bruto solo existe en el paso 1-2, dentro de ese contenedor: no se copia al
@@ -112,6 +115,21 @@ users=$(psql_db "$STAGING" </dev/null -c 'COPY (SELECT * FROM salida.users ORDER
 tasks=$(psql_db "$STAGING" </dev/null -c 'COPY (SELECT * FROM salida.tasks ORDER BY id) TO STDOUT')
 [ -n "$users" ] || { echo "❌ La copia no tiene personas: ¿se ha restaurado bien?" >&2; exit 1; }
 
+# ¿Desarrollo ya impone RF-8? Antes de la migración del CHECK, la copia entra tal cual,
+# que es lo que permite reproducir INC-0412. Después, sus estados fuera de los tres se
+# normalizan con la MISMA tabla que esa migración
+# (database/migrations/1790981112497_add_status_check_to_tasks_table.ts): si cambia
+# allí, cambia aquí. Lo que no está en la tabla no se toca, y el CHECK lo rechaza: falla
+# en alto, como la migración.
+impone_rf8=$(psql_db flowsync -tA </dev/null -c "
+  SELECT EXISTS (SELECT 1 FROM pg_constraint
+                 WHERE conname = 'tasks_status_check' AND conrelid = 'tasks'::regclass)")
+if [ "$impone_rf8" = "t" ]; then
+  fuera=$(psql_db "$STAGING" -tA </dev/null -c "
+    SELECT count(*) FROM salida.tasks WHERE status NOT IN ('pending', 'in_progress', 'done')")
+  echo "🧭 Desarrollo ya impone RF-8: $fuera tareas de la copia traen otro estado y se normalizan como en su migración."
+fi
+
 # --- 3. Sustitución en desarrollo, en una transacción -----------------------------------
 
 echo "🔁 Sustituyendo los datos de la base de desarrollo..."
@@ -123,9 +141,20 @@ echo "🔁 Sustituyendo los datos de la base de desarrollo..."
   printf '%s\n' "$users"
   printf '%s\n' '\.'
   if [ -n "$tasks" ]; then
-    echo "COPY tasks ($cols_tasks) FROM STDIN;"
+    # Por una tabla temporal sin el CHECK (LIKE no copia las restricciones CHECK), para
+    # poder normalizar antes de que las vea `tasks`.
+    echo 'CREATE TEMP TABLE tasks_copia (LIKE tasks INCLUDING DEFAULTS) ON COMMIT DROP;'
+    echo "COPY tasks_copia ($cols_tasks) FROM STDIN;"
     printf '%s\n' "$tasks"
     printf '%s\n' '\.'
+    if [ "$impone_rf8" = "t" ]; then
+      echo "UPDATE tasks_copia SET status = CASE lower(btrim(status))
+              WHEN 'hecho' THEN 'done' WHEN 'done' THEN 'done'
+              WHEN 'en curso' THEN 'in_progress' WHEN 'pendiente' THEN 'pending' END
+            WHERE status NOT IN ('pending', 'in_progress', 'done')
+              AND lower(btrim(status)) IN ('hecho', 'done', 'en curso', 'pendiente');"
+    fi
+    echo "INSERT INTO tasks ($cols_tasks) SELECT $cols_tasks FROM tasks_copia;"
   fi
   echo "SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM users;"
   echo "SELECT setval(pg_get_serial_sequence('tasks', 'id'), COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM tasks;"
