@@ -3,6 +3,12 @@
     "title": "FlowSync API",
     "version": "1.0.0"
   },
+  "servers": [
+    {
+      "url": "http://localhost:3333",
+      "description": "Desarrollo local"
+    }
+  ],
   "components": {
     "securitySchemes": {
       "bearer": {

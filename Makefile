@@ -14,15 +14,15 @@ BACKEND  := backend
 FRONTEND := frontend
 
 .DEFAULT_GOAL := help
-.PHONY: help setup start install env db-up db-down migrate seed db-readonly copia-produccion test clean
+.PHONY: test-unit test-e2e help setup start install env db-up db-down migrate seed db-readonly copia-produccion test clean
 
 # La ayuda se genera a partir de los comentarios `## ...` de cada target, para
 # que no haya un segundo listado que mantener a mano y que pueda divergir.
 help: ## Muestra esta ayuda
 	@echo "FlowSync — targets disponibles:"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) \
-		| awk 'BEGIN { FS = ":.*## " }; { printf "  make %-8s %s\n", $$1, $$2 }'
+	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) \
+		| awk 'BEGIN { FS = ":.*## " }; { printf "  make %-10s %s\n", $$1, $$2 }'
 	@echo ""
 
 # ---------------------------------------------------------------------------
@@ -116,6 +116,12 @@ copia-produccion: migrate ## Carga la copia de producción SEUDONIMIZADA en desa
 
 test: migrate ## Corre los tests del backend contra la base de pruebas
 	@cd $(BACKEND) && npm test
+
+test-unit: migrate ## Solo la suite unitaria (sin servidor ni base de datos)
+	@cd $(BACKEND) && node ace test unit
+
+test-e2e: migrate ## Solo la suite funcional: peticiones HTTP reales contra la base de pruebas
+	@cd $(BACKEND) && node ace test functional
 
 # ---------------------------------------------------------------------------
 # start

@@ -10,6 +10,10 @@ export default defineConfig({
       // el código expone hoy.
       version: '1.0.0',
     },
+    // Dónde escucha la API en desarrollo. Sin esta lista, una herramienta que
+    // importe el documento (Postman, un cliente generado) no sabe a qué dirección
+    // lanzar las peticiones y las deja sin servidor.
+    servers: [{ url: 'http://localhost:3333', description: 'Desarrollo local' }],
     components: {
       securitySchemes: {
         // El nombre `bearer` no es libre: es el que usa el decorador
