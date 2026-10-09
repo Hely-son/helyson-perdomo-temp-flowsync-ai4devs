@@ -111,10 +111,7 @@ test.group('Tasks | vencimiento', (group) => {
     assert.isFalse(tarea.isOverdue)
   })
 
-  test('una tarea sin fecha no se vence nunca, por antigua que sea', async ({
-    client,
-    assert,
-  }) => {
+  test('una tarea sin fecha no se vence nunca, por antigua que sea', async ({ client, assert }) => {
     const token = await sesion(client)
     const id = await crearTarea(client, token)
 
