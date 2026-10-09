@@ -1,5 +1,6 @@
 import { ApiProperty } from '@foadonis/openapi/decorators'
 import { TASK_STATUSES } from '#models/task'
+import { COMMENT_BODY_MAX_LENGTH } from '#models/comment'
 
 /**
  * Esquemas reutilizables del documento OpenAPI.
@@ -149,6 +150,34 @@ export class TrashedTask {
 }
 
 /**
+ * Un comentario de una tarea (`CommentTransformer`). No lleva el identificador de la
+ * tarea: se pide siempre colgado de ella.
+ */
+export class Comment {
+  @ApiProperty({ type: 'number', example: 1 })
+  id!: number
+
+  @ApiProperty({
+    type: 'string',
+    minLength: 1,
+    maxLength: COMMENT_BODY_MAX_LENGTH,
+    example: 'Falta el informe del trimestre',
+    description: 'El texto tal y como se guardó: ya sin los espacios de los extremos.',
+  })
+  body!: string
+
+  @ApiProperty({
+    type: () => TaskAssignee,
+    description:
+      'Quien lo escribió, que es siempre la cuenta dueña del token con el que se envió. Misma forma que el responsable de una tarea: identificador, nombre e iniciales, nunca el email.',
+  })
+  author!: TaskAssignee
+
+  @ApiProperty({ type: 'string', format: 'date-time' })
+  createdAt!: string
+}
+
+/**
  * El envoltorio `{ "data": ... }` que `providers/api_provider.ts` pone a toda
  * respuesta. Se documenta como parte de la forma porque el cliente lo tiene que
  * desenvolver.
@@ -176,6 +205,16 @@ export class TrashedTaskResponse {
 export class TrashedTaskListResponse {
   @ApiProperty({ type: () => [TrashedTask] })
   data!: TrashedTask[]
+}
+
+export class CommentResponse {
+  @ApiProperty({ type: () => Comment })
+  data!: Comment
+}
+
+export class CommentListResponse {
+  @ApiProperty({ type: () => [Comment] })
+  data!: Comment[]
 }
 
 /**
@@ -222,6 +261,22 @@ export class SetTaskDueDateBody {
       'Día de referencia con el que se resuelve `isOverdue` en la respuesta. Obligatorio y sin valor por defecto.',
   })
   today!: string
+}
+
+/**
+ * Cuerpo de un comentario nuevo. El texto es lo único que se lee: la tarea sale de la
+ * URL y el autor del token, y un `author` o un `authorId` enviados se ignoran.
+ */
+export class CreateCommentBody {
+  @ApiProperty({
+    type: 'string',
+    minLength: 1,
+    maxLength: COMMENT_BODY_MAX_LENGTH,
+    example: 'Falta el informe del trimestre',
+    description:
+      'Se recortan los espacios de los extremos antes de comprobar la longitud: un texto de solo espacios se rechaza igual que uno vacío, y pasarse de 500 es un error, nunca un recorte. Tampoco se admite repetir, ya recortado, el último comentario de la misma cuenta en la misma tarea.',
+  })
+  body!: string
 }
 
 /**

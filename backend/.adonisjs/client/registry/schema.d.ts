@@ -115,6 +115,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/tasks_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'tasks.task_trash.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/tasks/trash'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/task_trash_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/task_trash_controller').default['index']>>>
+    }
+  }
   'tasks.tasks.show': {
     methods: ["GET","HEAD"]
     pattern: '/api/v1/tasks/:id'
@@ -125,6 +137,30 @@ export interface Registry {
       query: ExtractQueryForGet<InferInput<(typeof import('#validators/task').taskReferenceDayValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/tasks_controller').default['show']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/tasks_controller').default['show']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'tasks.tasks.destroy': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/tasks/:id'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/tasks_controller').default['destroy']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/tasks_controller').default['destroy']>>>
+    }
+  }
+  'tasks.task_trash.restore': {
+    methods: ["POST"]
+    pattern: '/api/v1/tasks/:id/restore'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/task_trash_controller').default['restore']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/task_trash_controller').default['restore']>>>
     }
   }
   'tasks.task_statuses.update': {
@@ -149,6 +185,30 @@ export interface Registry {
       query: ExtractQuery<InferInput<(typeof import('#validators/task').setTaskDueDateValidator)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/task_due_dates_controller').default['update']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/task_due_dates_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'tasks.task_comments.index': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/tasks/:id/comments'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/task_comments_controller').default['index']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/task_comments_controller').default['index']>>>
+    }
+  }
+  'tasks.task_comments.store': {
+    methods: ["POST"]
+    pattern: '/api/v1/tasks/:id/comments'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/comment').createCommentValidator)>>
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: ExtractQuery<InferInput<(typeof import('#validators/comment').createCommentValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/task_comments_controller').default['store']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/task_comments_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
 }

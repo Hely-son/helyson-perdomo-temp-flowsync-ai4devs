@@ -7,6 +7,7 @@ export const controllers = {
   AccessTokens: () => import('#controllers/access_tokens_controller'),
   NewAccount: () => import('#controllers/new_account_controller'),
   Profile: () => import('#controllers/profile_controller'),
+  TaskComments: () => import('#controllers/task_comments_controller'),
   TaskDueDates: () => import('#controllers/task_due_dates_controller'),
   TaskStatuses: () => import('#controllers/task_statuses_controller'),
   TaskTrash: () => import('#controllers/task_trash_controller'),

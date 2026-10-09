@@ -104,7 +104,8 @@ db-readonly: db-up ## Crea o actualiza flowsync_ro, rol de solo lectura (solo de
 		psql -q -U flowsync -d flowsync -f - < $(BACKEND)/database/readonly-role.sql
 
 # Carga una copia de producción en desarrollo, seudonimizada (INC-0412). SUSTITUYE los
-# datos de users, tasks y auth_access_tokens de la base de desarrollo. Lo lanza una
+# datos de users, tasks y auth_access_tokens de la base de desarrollo, y vacía comments
+# (cuelgan de esas personas y tareas, y la copia no trae ninguno). Lo lanza una
 # persona: la copia lleva datos personales reales y ningún agente la abre. El camino
 # entero (base intermedia cerrada a flowsync_ro, database/seudonimizar.sql, carga y
 # borrado de la intermedia) está en backend/database/copia-produccion.sh.

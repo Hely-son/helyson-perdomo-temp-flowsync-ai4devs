@@ -28,12 +28,21 @@ export interface ApiDefinition {
       index: typeof routes['tasks.tasks.index']
       store: typeof routes['tasks.tasks.store']
       show: typeof routes['tasks.tasks.show']
+      destroy: typeof routes['tasks.tasks.destroy']
+    }
+    taskTrash: {
+      index: typeof routes['tasks.task_trash.index']
+      restore: typeof routes['tasks.task_trash.restore']
     }
     taskStatuses: {
       update: typeof routes['tasks.task_statuses.update']
     }
     taskDueDates: {
       update: typeof routes['tasks.task_due_dates.update']
+    }
+    taskComments: {
+      index: typeof routes['tasks.task_comments.index']
+      store: typeof routes['tasks.task_comments.store']
     }
   }
 }

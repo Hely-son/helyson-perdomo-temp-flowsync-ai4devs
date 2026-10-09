@@ -13,9 +13,14 @@ export type ScannedRoutes = {
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'tasks.tasks.index': { paramsTuple?: []; params?: {} }
     'tasks.tasks.store': { paramsTuple?: []; params?: {} }
+    'tasks.task_trash.index': { paramsTuple?: []; params?: {} }
     'tasks.tasks.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'tasks.tasks.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'tasks.task_trash.restore': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'tasks.task_statuses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'tasks.task_due_dates.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'tasks.task_comments.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'tasks.task_comments.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   GET: {
     'openapi.html': { paramsTuple?: []; params?: {} }
@@ -23,7 +28,9 @@ export type ScannedRoutes = {
     'openapi.yaml': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'tasks.tasks.index': { paramsTuple?: []; params?: {} }
+    'tasks.task_trash.index': { paramsTuple?: []; params?: {} }
     'tasks.tasks.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'tasks.task_comments.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   HEAD: {
     'openapi.html': { paramsTuple?: []; params?: {} }
@@ -31,13 +38,20 @@ export type ScannedRoutes = {
     'openapi.yaml': { paramsTuple?: []; params?: {} }
     'profile.profile.show': { paramsTuple?: []; params?: {} }
     'tasks.tasks.index': { paramsTuple?: []; params?: {} }
+    'tasks.task_trash.index': { paramsTuple?: []; params?: {} }
     'tasks.tasks.show': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'tasks.task_comments.index': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {
     'auth.new_account.store': { paramsTuple?: []; params?: {} }
     'auth.access_tokens.store': { paramsTuple?: []; params?: {} }
     'profile.access_tokens.destroy': { paramsTuple?: []; params?: {} }
     'tasks.tasks.store': { paramsTuple?: []; params?: {} }
+    'tasks.task_trash.restore': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+    'tasks.task_comments.store': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
+  }
+  DELETE: {
+    'tasks.tasks.destroy': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   PATCH: {
     'tasks.task_statuses.update': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }

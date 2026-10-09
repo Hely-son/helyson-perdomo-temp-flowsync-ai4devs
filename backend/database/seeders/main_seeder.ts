@@ -10,7 +10,7 @@ import { UserFactory, emailPara } from '#database/factories/user_factory'
  * Cinco personas con nombre fijo, para que quien desarrolla sepa con quién entrar:
  * el correo sale de `emailPara(nombre)` y la contraseña es `PASSWORD_DEMO`.
  */
-const EQUIPO = [
+export const EQUIPO = [
   'Lucía Fernández',
   'Mateo Ortega',
   'Valentina Navarro',

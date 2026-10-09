@@ -57,6 +57,8 @@ router
         router.post(':id/restore', [controllers.TaskTrash, 'restore'])
         router.patch(':id/status', [controllers.TaskStatuses, 'update'])
         router.put(':id/due-date', [controllers.TaskDueDates, 'update'])
+        router.get(':id/comments', [controllers.TaskComments, 'index'])
+        router.post(':id/comments', [controllers.TaskComments, 'store'])
       })
       .prefix('tasks')
       .as('tasks')

@@ -8,6 +8,8 @@
 #      viaja, ya seudonimizado.
 #   3. Pasa `salida` a la base de desarrollo, SUSTITUYENDO users, tasks y los tokens que
 #      hubiera, en una sola transacción: si algo falla, desarrollo queda como estaba.
+#      Los comentarios de desarrollo (`comments`) se vacían también: cuelgan de personas
+#      y tareas que dejan de existir, y la copia no trae ninguno (ver seudonimizar.sql).
 #      Si desarrollo ya impone RF-8 (el CHECK `tasks_status_check`), los estados de la
 #      copia se normalizan antes, igual que lo hizo esa migración: la copia es de antes
 #      de la regla y, sin eso, la base la rechaza entera.
@@ -130,13 +132,26 @@ if [ "$impone_rf8" = "t" ]; then
   echo "🧭 Desarrollo ya impone RF-8: $fuera tareas de la copia traen otro estado y se normalizan como en su migración."
 fi
 
+# Tablas de desarrollo que cuelgan de users o tasks por clave foránea y que la copia no
+# trae. TRUNCATE no sigue el ON DELETE de las claves: sin CASCADE, vaciar `users` o `tasks`
+# falla mientras otra tabla las referencie y no esté en la misma lista. No se usa CASCADE
+# a propósito: vaciaría en silencio cualquier tabla nueva que las referencie, y es mejor
+# que una tabla nueva rompa esto en alto y alguien decida aquí qué hacer con ella.
+# `comments` solo se añade si desarrollo ya tiene esa migración aplicada.
+tablas_dev='auth_access_tokens, tasks, users'
+tiene_comments=$(psql_db flowsync -tA </dev/null -c "SELECT to_regclass('public.comments') IS NOT NULL")
+if [ "$tiene_comments" = "t" ]; then
+  tablas_dev="$tablas_dev, comments"
+  echo "💬 Desarrollo tiene comentarios: se vacían con el resto (la copia no trae ninguno)."
+fi
+
 # --- 3. Sustitución en desarrollo, en una transacción -----------------------------------
 
 echo "🔁 Sustituyendo los datos de la base de desarrollo..."
 {
-  # Los tres a la vez: se referencian entre sí por clave foránea. Las secuencias vuelven
+  # Todas a la vez: se referencian entre sí por clave foránea. Las secuencias vuelven
   # a 1 y se reajustan al final, porque COPY con ids explícitos no las avanza.
-  echo 'TRUNCATE auth_access_tokens, tasks, users RESTART IDENTITY;'
+  echo "TRUNCATE $tablas_dev RESTART IDENTITY;"
   echo "COPY users ($cols_users) FROM STDIN;"
   printf '%s\n' "$users"
   printf '%s\n' '\.'
