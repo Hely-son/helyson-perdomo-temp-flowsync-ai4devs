@@ -1,9 +1,11 @@
 {
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1"
+  },
   "permissions": {
     "deny": [
       "Read(**/backups/**)",
       "Edit(**/backups/**)",
-      "Write(**/backups/**)",
       "Bash(*backups*)"
     ]
   },
