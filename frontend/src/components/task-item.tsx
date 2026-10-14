@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { ChevronRightIcon } from 'lucide-react'
+import { AssigneeAvatar } from '@/components/assignee-avatar'
 import { Button } from '@/components/ui/button'
 import {
   TASK_STATUSES,
@@ -26,12 +27,7 @@ export function TaskItem({ task, onChangeStatus, isBusy }: TaskItemProps) {
   return (
     <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
-        <span
-          className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-medium"
-          aria-hidden="true"
-        >
-          {task.assignee.initials}
-        </span>
+        <AssigneeAvatar assignee={task.assignee} />
         <div className="min-w-0">
           {/* Se abre desde el título y no pulsando la fila entera: los tres
               botones de estado están dentro de esa fila, y convertirlos en
