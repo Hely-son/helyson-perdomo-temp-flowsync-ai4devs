@@ -113,6 +113,8 @@ VineJS 4 en `app/validators/`, consumido con `request.validateUsing(validator)`.
 
 El stack va deliberadamente en versiones muy recientes: **AdonisJS 7, Lucid 22, VineJS 4, Auth 10, TypeScript 6, React 19, Vite 8, oxlint**. Varias APIs difieren de las de versiones anteriores (esquema generado en vez de columnas en el modelo, registro de controladores generado, transformers/serializers, `vine.create`). Antes de asumir una firma por memoria o por docs de v6, comprueba los `.d.ts` reales en `backend/node_modules/@adonisjs/*/build/`.
 
+**Node va fijado a 24.18.1 en `.nvmrc`**, que también lee el CI. A partir de Node 24.21, cualquier comando propio de `backend/commands/` (hoy `openapi:generate` y `openapi:check`) muere con `Invalid URL` antes de ejecutarse. Ace valida sus metadatos con `jsonschema` 1.5.0, que resuelve `"/#/definitions/..."` contra la base `thismessage::/`, y Node 24.21 ya no lo acepta. Los comandos del propio ace (`serve`, `test`, `migration:*`, `list:routes`) no se ven afectados. Ni `jsonschema` 1.5.0 ni `@adonisjs/ace` 14.1.1 lo corrigen todavía: no subas `.nvmrc` sin comprobar antes `npm run openapi:check` con la versión nueva.
+
 ## Frontend
 
 El typecheck vive dentro de `npm run build`; el lint es **oxlint** (`.oxlintrc.json`), no eslint. El formateo es Prettier (`.prettierrc.json`: `semi: false`, `singleQuote: true`, para respetar el estilo ya existente); un hook `PostToolUse` en `.claude/settings.json` lo corre automáticamente sobre cada fichero de `frontend/` que Claude edite. No hay runner de tests instalado.
