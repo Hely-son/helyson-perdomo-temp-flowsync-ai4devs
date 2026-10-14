@@ -20,9 +20,9 @@ un caso medible. **Máximo 5 sugerencias por revisión**, las de más valor. El 
 
 ## Dónde no reportar
 
-- Formato, lint y tipos: ya los vigilan Prettier (hook en `frontend/`, `npm run format`), `eslint`,
-  `oxlint`, `npm run typecheck` y `npm run build`.
-- Que `docs/api/openapi.json` no coincida con el código: lo vigila `npm run openapi:check`.
+- Que `docs/api/openapi.json` no coincida con el código: lo vigila el job `openapi:check` en CI.
+- Formato y estilo: Prettier lo resuelve (`npm run format`) y no rompe nada. Lint y tipos **no** los
+  vigila ningún CI: un error de tipos o de lint en el diff sí se reporta.
 - Código generado: `backend/database/schema.ts`, `backend/.adonisjs/`, `frontend/src/components/ui/`.
 - Lockfiles, `tmp/` y bases de datos SQLite.
 - Gustos sin consecuencia: si no puedes decir qué se rompe, no es un hallazgo.

@@ -17,7 +17,7 @@ El workflow está commiteado, pero **no funciona hasta que se completen los paso
 2. **Crear el secreto de la credencial** en *Settings → Secrets and variables → Actions → New
    repository secret*. Hay que elegir uno de los dos caminos de la [sección de abajo](#la-credencial),
    y el nombre del secreto tiene que ser exactamente el que se indica allí.
-3. **Que Actions vuelva a ejecutarse en la organización.** A fecha de este documento, la organización
+3. **Que Actions vuelva a ejecutarse en la organización.** A 14 de octubre de 2026, la organización
    LIDR-academy está marcada por GitHub («The LIDR-academy organization has been flagged») y los
    workflows de los PRs no llegan a lanzarse. Mientras siga así, ni este job ni `openapi:check`
    corren. Se resuelve con el enlace *contact support* del aviso, y también tiene que hacerlo un owner.
@@ -66,11 +66,14 @@ Deja solo una de las dos. Este uso se factura por tokens a la organización de l
 ### No las cruces
 
 Un token de `setup-token` en `anthropic_api_key`, o una clave de API en `claude_code_oauth_token`,
-**falla en la primera llamada al modelo con un error de autenticación que no dice por qué**. Lo mismo
-pasa si el nombre del secreto no coincide con el que lee el workflow: `${{ secrets.X }}` de un secreto
-inexistente se convierte en una cadena vacía, no en un error. Si el job falla al autenticar, revisa
-primero estas tres cosas: qué credencial es (`sk-ant-oat` o `sk-ant-api`), en qué entrada está y cómo
-se llama el secreto.
+**falla en la primera llamada al modelo con un error de autenticación que no dice por qué**: la acción
+ve una credencial no vacía y la da por buena hasta que la API la rechaza. Si el job falla así, revisa
+qué credencial es (`sk-ant-oat` o `sk-ant-api`) y en qué entrada está.
+
+Otra cosa distinta es que el nombre del secreto no coincida con el que lee el workflow. Un secreto
+inexistente llega como cadena vacía, y la acción se para antes de llamar al modelo con un mensaje
+explícito: *«Either ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN, … is required»*. Si ves ese mensaje,
+el problema es el nombre del secreto, no la credencial.
 
 ## En qué se va el dinero
 
@@ -89,6 +92,8 @@ claude_args: |
   menos tokens.
 - **`--max-turns 40`.** Es el techo de idas y vueltas del agente: cada lectura, cada `gh pr diff` y cada
   comentario cuenta. Si se alcanza, la revisión se corta donde esté.
+- **`concurrency`.** Un push nuevo al PR cancela la revisión que estuviera en curso, así que no se paga
+  por revisar un diff que ya ha cambiado.
 - **`timeout-minutes: 10`.** Es el techo de reloj del job. Acota los minutos de runner y, de rebote, el
   gasto de un revisor atascado.
 
@@ -104,6 +109,12 @@ claude_args: |
 
 - Clave de API: <https://platform.claude.com/docs/en/about-claude/pricing>, coste por millón de tokens según el modelo.
 - Suscripción: <https://claude.com/pricing>, planes y sus límites de uso.
+
+## Qué PRs no se revisan
+
+Además de los forks (abajo), el job se salta los PRs abiertos por bots (`github.actor` acabado en
+`[bot]`, como Dependabot), que tampoco reciben los secretos de Actions, y los PRs en borrador: estos se
+revisan al marcarlos como listos (`ready_for_review`).
 
 ## PRs desde un fork en un repositorio público
 
@@ -125,3 +136,13 @@ Lo que **no** hay que hacer para cubrir los forks es pasar a `pull_request_targe
 acceso a los secretos, pero junto con código y texto que escribe un tercero. Basta un prompt injection
 en el PR para que el revisor actúe con tu credencial. Si hace falta revisar un PR externo, que un
 mantenedor suba la rama al repo principal y abra el PR desde ahí, o que lo revise en local.
+
+## Riesgo que queda: prompt injection desde el propio PR
+
+Excluir forks no elimina el riesgo, solo lo acota a quien ya tiene escritura en el repo. El revisor lee
+contenido que escribe el autor del PR (diff, título, descripción, comentarios en el código), y con ese
+contenido se le puede intentar dar órdenes. Lo que puede hacer está limitado por `--allowedTools`:
+leer ficheros del checkout y comentar en el PR, sin Bash general ni escritura. La credencial le llega a
+la acción como variable de entorno (`CLAUDE_CODE_OAUTH_TOKEN`), no como fichero del repo. Aun así,
+`REVIEW.md` y `CLAUDE.md` se leen de la versión del PR, así que un PR puede cambiar la calibración con
+la que se revisa a sí mismo. No amplíes las herramientas permitidas sin tener esto en cuenta.

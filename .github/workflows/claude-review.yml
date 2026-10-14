@@ -8,13 +8,24 @@ on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
 
+# Un push nuevo al PR cancela la revisión en curso del anterior: no se paga dos
+# veces por revisar un diff que ya no existe.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     name: Revisión de Claude
-    # Un PR desde un fork no recibe los secretos del repo ni el token OIDC: el
-    # job fallaría en la primera llamada. Se salta en vez de dejar un rojo que
-    # no dice nada. Ver `docs/ci-revisor.md`.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Se salta, en vez de dejar un rojo que no dice nada:
+    # - PRs desde un fork y PRs de bots (Dependabot…): no reciben los secretos
+    #   de Actions, y sin credencial la acción falla al validar el entorno.
+    # - Borradores: se revisan al pasar a `ready_for_review`, no en cada push.
+    # Ver `docs/ci-revisor.md`.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository
+      && !endsWith(github.actor, '[bot]')
+      && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
