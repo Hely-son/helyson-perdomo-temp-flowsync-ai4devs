@@ -7,6 +7,7 @@ import { useAuth } from '@/auth/use-auth'
 import { useAuthForm } from '@/auth/use-auth-form'
 import { TaskItem } from '@/components/task-item'
 import { TaskFilter } from '@/components/task-filter'
+import { TaskProgress } from '@/components/task-progress'
 import { FieldError } from '@/components/field-error'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -19,6 +20,12 @@ import {
   type Task,
   type TaskStatus,
 } from '@/lib/types'
+import {
+  moveBetween,
+  totalOf,
+  withCreated,
+  type ProgressCount,
+} from '@/lib/progress'
 
 const FIELDS = ['title'] as const
 
@@ -45,6 +52,11 @@ export function TasksPage() {
   // Cuántas tareas hechas hay, para distinguir «el espacio está vacío» de
   // «no queda nada abierto». Solo se resuelve cuando hace falta.
   const [doneCount, setDoneCount] = useState<number | null>(null)
+  // El progreso de TODO el espacio, no de lo que deja ver el filtro: ninguna
+  // vista mezcla las hechas con el resto, y contar sobre las filas visibles
+  // daría siempre 0 % o 100 %. `null` es «aún no se sabe» o «no se ha podido
+  // calcular», y en los dos casos simplemente no se pinta.
+  const [progress, setProgress] = useState<ProgressCount | null>(null)
   const [title, setTitle] = useState('')
   const [statusError, setStatusError] = useState<string | null>(null)
   // Lo que una acción mía se ha llevado fuera de la vista actual. No es un
@@ -117,6 +129,31 @@ export function TasksPage() {
     }
   }, [token, statusParam])
 
+  // Efecto aparte y que solo depende del token: cambiar de filtro no lo repite
+  // ni lo invalida. Dos consultas porque la API no tiene un alcance que las
+  // junte: las abiertas (la vista por defecto) y las hechas. Si falla
+  // cualquiera, no se inventa un número: el resumen no se pinta y la lista
+  // sigue con sus propios errores.
+  useEffect(() => {
+    if (!token) return
+
+    let cancelled = false
+
+    setProgress(null)
+
+    Promise.all([api.listTasks(token), api.listTasks(token, 'done')])
+      .then(([open, done]) => {
+        if (!cancelled) setProgress({ open: open.length, done: done.length })
+      })
+      .catch(() => {
+        if (!cancelled) setProgress(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
   const handleFilter = (status: TaskStatus | null) => {
     // Quitar el filtro es borrar el parámetro, no poner uno que diga «todas»:
     // la vista por defecto es la ausencia de filtro, no un filtro más.
@@ -141,6 +178,7 @@ export function TasksPage() {
       // La API devuelve la lista con las más recientes primero, así que la
       // recién creada entra por arriba. Sin recargar ni volver a pedirla.
       setTasks((current) => [created, ...(current ?? [])])
+      setProgress((current) => current && withCreated(current))
       setTitle('')
 
       // Toda tarea nace pendiente, así que con el filtro puesto en otro estado
@@ -168,6 +206,9 @@ export function TasksPage() {
             item.id === task.id ? { ...item, status } : item,
           ) ?? current,
       )
+      setProgress(
+        (current) => current && moveBetween(current, previousStatus, status),
+      )
       setPendingIds((current) => new Set(current).add(task.id))
       setStatusError(null)
       setNotice(
@@ -191,6 +232,11 @@ export function TasksPage() {
             current?.map((item) =>
               item.id === task.id ? { ...item, status: previousStatus } : item,
             ) ?? current,
+        )
+        // El mismo delta con los estados invertidos: el resumen vuelve al
+        // valor de antes del intento, igual que la fila.
+        setProgress(
+          (current) => current && moveBetween(current, status, previousStatus),
         )
         setNotice(null)
         setStatusError(
@@ -277,6 +323,8 @@ export function TasksPage() {
         <div className="mb-6">
           <TaskFilter value={statusParam} onChange={handleFilter} />
         </div>
+
+        {progress && totalOf(progress) > 0 && <TaskProgress count={progress} />}
 
         {(formError || statusError || loadError) && (
           <Alert variant="destructive" className="mb-6">
