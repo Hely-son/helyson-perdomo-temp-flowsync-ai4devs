@@ -14,7 +14,7 @@ BACKEND  := backend
 FRONTEND := frontend
 
 .DEFAULT_GOAL := help
-.PHONY: test-unit test-e2e help setup start install env db-up db-down migrate seed db-readonly copia-produccion test clean
+.PHONY: test-unit test-e2e ui test-ui test-web hooks help setup start install env db-up db-down migrate seed db-readonly copia-produccion test clean
 
 # La ayuda se genera a partir de los comentarios `## ...` de cada target, para
 # que no haya un segundo listado que mantener a mano y que pueda divergir.
@@ -123,6 +123,35 @@ test-unit: migrate ## Solo la suite unitaria (sin servidor ni base de datos)
 
 test-e2e: migrate ## Solo la suite funcional: peticiones HTTP reales contra la base de pruebas
 	@cd $(BACKEND) && node ace test functional
+
+# ---------------------------------------------------------------------------
+# frontend: catálogo de componentes y comprobaciones de interfaz
+# ---------------------------------------------------------------------------
+
+ui: ## Arranca el catálogo de componentes (Storybook, http://localhost:6006)
+	@cd $(FRONTEND) && npm run storybook
+
+# Cada historia es una comprobación: se monta en un Chromium sin ventana y se
+# pasa el chequeo de accesibilidad. No necesita servidor ni base de datos.
+test-ui: ## Corre las comprobaciones de las historias, sin ventana
+	@cd $(FRONTEND) && npx vitest run --project=storybook
+
+# Aún no hay recorrido escrito ni @playwright/test instalado: en vez de fallar
+# con un error de npx que no explica nada, la receta lo dice. En cuanto exista
+# frontend/playwright.config.ts, esto lo corre sin tocar el Makefile.
+test-web: ## Corre el recorrido de navegador (Playwright; aún no hay ninguno)
+	@if [ ! -f $(FRONTEND)/playwright.config.ts ]; then \
+		echo "❌ No hay recorrido de navegador todavía: falta $(FRONTEND)/playwright.config.ts."; \
+		echo "   Hay que instalar @playwright/test en $(FRONTEND) y escribir el recorrido."; \
+		exit 1; \
+	fi
+	@cd $(FRONTEND) && npx playwright test
+
+# Un hook de git no viaja en el clon: hay que activarlo en cada copia del repo.
+# Idempotente. Para quitarlo: git config --unset core.hooksPath
+hooks: ## Activa los hooks de git del repo (pre-push: make test-ui); una vez por clon
+	@git config core.hooksPath .githooks
+	@echo "✅ Hooks activados (core.hooksPath = .githooks). Antes de cada push correrá: make test-ui"
 
 # ---------------------------------------------------------------------------
 # start

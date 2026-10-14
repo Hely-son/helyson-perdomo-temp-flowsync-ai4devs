@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# pre-push: antes de que el trabajo salga de esta máquina, corre las historias
+# del catálogo de componentes (`make test-ui`). Tardan segundos, no necesitan
+# servidor ni base de datos y se pueden esperar en cada push.
+#
+# Se instala con `make hooks` (git config core.hooksPath .githooks): un hook de
+# git no viaja en el clon, así que hay que hacerlo una vez en cada copia.
+#
+# POR QUÉ NO CORRE `make test-web`. El recorrido de navegador necesita la
+# aplicación entera levantada (base de datos, backend y frontend). Un
+# disparador que falla porque el servidor no estaba no dice nada sobre el
+# código, y quien lo sufre dos veces lo desactiva; y entonces se pierde también
+# lo que sí valía. Ese recorrido se lanza a mano, con la aplicación en marcha.
+set -uo pipefail
+
+# git pasa por la entrada estándar una línea por referencia a empujar:
+#   <ref local> <sha local> <ref remota> <sha remota>
+# Si todo lo que se empuja son borrados de rama (sha local de solo ceros) no hay
+# nada que comprobar. Sin referencias tampoco.
+solo_borrados=1
+while read -r _ sha_local _ _; do
+  if [[ ! "$sha_local" =~ ^0+$ ]]; then
+    solo_borrados=0
+  fi
+done
+[ "$solo_borrados" -eq 1 ] && exit 0
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+echo "pre-push: comprobando las historias del catálogo (make test-ui)..." >&2
+
+if ! make test-ui >&2; then
+  {
+    echo ""
+    echo "❌ pre-push: las historias del catálogo fallan. El push se ha cancelado."
+    echo ""
+    echo "   Para verlo con detalle:   make test-ui     (la salida de arriba, completa)"
+    echo "                             make ui          (el catálogo en el navegador)"
+    echo ""
+    echo "   Si aun así necesitas empujar, se salta esta comprobación con:"
+    echo "                             git push --no-verify"
+    echo "   (también salta cualquier otro hook de pre-push; úsalo sabiendo que el"
+    echo "   catálogo no está en verde)."
+  } >&2
+  exit 1
+fi
+
+exit 0
