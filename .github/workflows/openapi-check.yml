@@ -1,0 +1,43 @@
+# Comprueba que `docs/api/openapi.json` sigue coincidiendo con el documento que
+# genera el código. Solo compara: si falla, el arreglo es correr
+# `npm run openapi:generate` en local y commitear el resultado.
+name: OpenAPI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Solo lee el repo: ni comenta en el PR ni escribe nada de vuelta.
+permissions:
+  contents: read
+
+jobs:
+  openapi-check:
+    name: openapi:check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      # Actions fijadas por SHA: una etiqueta se puede mover, un commit no.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      # El comando arranca la app y `start/env.ts` valida el entorno al
+      # arrancar, así que hace falta un `.env` con una APP_KEY cualquiera. Se
+      # genera al vuelo: no es un secreto, no se usa para nada más.
+      - name: Preparar el entorno
+        run: cp .env.example .env && node ace generate:key
+
+      - run: npm run openapi:check
