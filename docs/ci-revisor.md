@@ -17,16 +17,17 @@ El workflow está commiteado, pero **no funciona hasta que se completen los paso
 2. **Crear el secreto de la credencial** en *Settings → Secrets and variables → Actions → New
    repository secret*. Hay que elegir uno de los dos caminos de la [sección de abajo](#la-credencial),
    y el nombre del secreto tiene que ser exactamente el que se indica allí.
-3. **Escribir el archivo de calibración `REVIEW.md`** en la raíz del repo. El prompt le pide al
-   revisor que lo lea primero, si existe, para saber qué cuenta como hallazgo y con qué severidad. Hoy
-   no existe, así que el revisor solo se guía por `CLAUDE.md` y las specs de `openspec/specs/`.
-4. **Que Actions vuelva a ejecutarse en la organización.** A fecha de este documento, la organización
+3. **Que Actions vuelva a ejecutarse en la organización.** A fecha de este documento, la organización
    LIDR-academy está marcada por GitHub («The LIDR-academy organization has been flagged») y los
    workflows de los PRs no llegan a lanzarse. Mientras siga así, ni este job ni `openapi:check`
    corren. Se resuelve con el enlace *contact support* del aviso, y también tiene que hacerlo un owner.
-5. **Comprobar la primera ejecución.** Una vez hechos los pasos 1–4, el primer PR que se abra o
+4. **Comprobar la primera ejecución.** Una vez hechos los pasos 1–3, el primer PR que se abra o
    actualice debería tener un check *Revisión de Claude* y los comentarios de `claude[bot]`. Si el job
    sale en verde pero no hay comentarios, el registro de la ejecución dice por qué.
+
+La calibración del revisor —qué es grave y qué sugerencia, el tope de sugerencias, dónde no reportar y
+la evidencia que se exige— vive en [`REVIEW.md`](../REVIEW.md), que el prompt le manda leer primero.
+Para ajustar su criterio se edita ese archivo, no el workflow.
 
 Atajo para los pasos 1 y 2: desde Claude Code, en local, `/install-github-app` instala la app y crea el
 secreto en un mismo flujo.
