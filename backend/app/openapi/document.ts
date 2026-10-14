@@ -40,8 +40,9 @@ export function describeDifferences(versioned: Json, generated: Json, path = '')
     const keys = new Set([...Object.keys(versioned), ...Object.keys(generated)])
     return [...keys].flatMap((key) => {
       const child = `${path}/${escapePointer(key)}`
-      if (!(key in generated)) return [`- ${child}: está en el versionado y ya no se genera`]
-      if (!(key in versioned)) return [`+ ${child}: se genera y falta en el versionado`]
+      if (!Object.hasOwn(generated, key))
+        return [`- ${child}: está en el versionado y ya no se genera`]
+      if (!Object.hasOwn(versioned, key)) return [`+ ${child}: se genera y falta en el versionado`]
       return describeDifferences(versioned[key], generated[key], child)
     })
   }
