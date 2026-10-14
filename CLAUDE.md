@@ -155,6 +155,13 @@ Organización de `src/`:
 
 La URL de la API sale de `VITE_API_URL` (ver `frontend/.env.example`); por defecto `http://localhost:3333`.
 
+### De dónde sale una pieza de interfaz nueva
+
+1. **Primero el catálogo.** Hoy `src/components/ui/` tiene `alert`, `button`, `card`, `input`, `label` y `progress`; ante la duda, `ls src/components/ui`, que es la fuente de verdad y esta lista no. Si la pieza que hace falta está ahí, se compone con ella (variantes y tamaños incluidos) en vez de repetir sus clases a mano.
+2. **Si falta, se trae; no se escribe.** `npx shadcn@latest add <componente>` desde `frontend/`, sin editar el archivo generado. Revisa lo que deja: el CLI ha llegado a escribir `import { cn } from "cn"` y a añadir un paquete `cn` a `package.json`; el helper del proyecto es `@/lib/utils`.
+3. **Escribir un elemento de interfaz por tu cuenta fuera de `ui/` es una decisión que se declara, no un descuido.** Vale cuando el catálogo no tiene la pieza ni la va a tener (el avatar con iniciales, el spinner a pantalla completa), pero se dice en un comentario junto al elemento y en la respuesta, para que quien revise vea la desviación. Un contenedor de maquetación (`div` con `flex`, `grid`, `gap`) no cuenta.
+4. **Los colores tienen nombre.** Se usan los tokens del tema (`bg-primary`, `text-muted-foreground`, `text-destructive`...) y su valor vive solo en `src/index.css`. Un hexadecimal o una clase de paleta cruda (`bg-blue-600`) hace saltar el hook `.claude/hooks/color-con-nombre.sh`, que avisa pero no bloquea: si el caso es legítimo se deja y se declara como en el punto 3.
+
 ## Reglas de proceso
 - Convenciones de base de datos (única fuente, no se copian aquí): @docs/convenciones/base-de-datos.md
 - Cualquier tarea de backend se hace con la skill `backend-feature` (`.claude/skills/backend-feature/SKILL.md`), sin que nadie tenga que pedirlo: plan por capas y parada para aprobarlo, tests de contrato con el subagente `test-writer`, rojo, tests congelados por su `shasum`, implementación con el subagente `implementer` hasta el verde, y cierre con `dbhub`, `openapi:check` y Postman.
