@@ -1,0 +1,55 @@
+# Publica el Storybook del frontend en Chromatic en cada pull request, para
+# que quien revisa vea cómo queda cada estado de cada pieza y compare contra la
+# línea base, no solo lea el diff del código.
+#
+# Hace falta dar de alta el secreto CHROMATIC_PROJECT_TOKEN en el repositorio
+# (Settings → Secrets and variables → Actions). El token sale del proyecto en
+# chromatic.com.
+name: chromatic
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Solo lectura del código: Chromatic habla con su servicio por el token y no
+# necesita escribir nada en el repositorio.
+permissions:
+  contents: read
+
+jobs:
+  chromatic:
+    name: catálogo en Chromatic
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Un PR desde un fork no ve los secretos del repositorio: sin
+    # CHROMATIC_PROJECT_TOKEN la acción fallaría sin explicar por qué. Se salta
+    # limpiamente, con el mismo criterio que `revisor.yml`.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Chromatic compara cada build con el de la rama base y necesita el
+          # historial de git para encontrarlo; con un clon superficial no puede.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Con `--legacy-peer-deps`, como el resto del proyecto (ver CLAUDE.md).
+      - name: Instalar dependencias del frontend
+        run: npm ci --legacy-peer-deps
+        working-directory: frontend
+
+      - uses: chromaui/action@v18
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          workingDir: frontend
+          # Una diferencia visual es un cambio que hay que mirar, no un error:
+          # se presenta en Chromatic para aceptarla o rechazarla y no hace caer
+          # el trabajo. Lo que sí falla es que el Storybook no compile.
+          exitZeroOnChanges: true
