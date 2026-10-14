@@ -139,7 +139,7 @@ test-ui: ## Corre las comprobaciones de las historias, sin ventana
 # Aún no hay recorrido escrito ni @playwright/test instalado: en vez de fallar
 # con un error de npx que no explica nada, la receta lo dice. En cuanto exista
 # frontend/playwright.config.ts, esto lo corre sin tocar el Makefile.
-test-web: ## Corre el recorrido de navegador (Playwright; aún no hay ninguno)
+test-web: ## Corre el recorrido de navegador (Playwright; necesita la aplicación levantada)
 	@if [ ! -f $(FRONTEND)/playwright.config.ts ]; then \
 		echo "❌ No hay recorrido de navegador todavía: falta $(FRONTEND)/playwright.config.ts."; \
 		echo "   Hay que instalar @playwright/test en $(FRONTEND) y escribir el recorrido."; \
