@@ -39,9 +39,9 @@ jobs:
 
             Eres el revisor de código de este PR.
 
-            1. Lee primero `.claude/agents/adversarial-reviewer.md`: son tus
-               criterios de revisión. Ignora su cabecera (`tools`, `model`):
-               aquí las herramientas y el modelo los fija el workflow.
+            1. Lee primero `REVIEW.md`: son tus criterios de revisión, qué es
+               grave, cuántas sugerencias publicar, dónde no reportar y qué
+               evidencia exigir. Si otra guía del repo choca con él, manda él.
             2. Obtén el cambio con `gh pr view ${{ github.event.pull_request.number }}`
                y `gh pr diff ${{ github.event.pull_request.number }}`, y lee su
                salida directamente. No la redirijas a ficheros (`>`, `>>`,
@@ -51,11 +51,12 @@ jobs:
                scenarios de `openspec/specs/` contra los que contrastarlo.
             4. Publica cada hallazgo en cuanto lo confirmes, como comentario en
                línea con `mcp__github_inline_comment__create_inline_comment`
-               sobre la línea afectada: severidad (crítico/alto/medio),
-               evidencia y el scenario que se rompe. Tienes un máximo de turnos
-               y lo que no se publica se pierde.
+               sobre la línea afectada: si es grave o sugerencia, la evidencia
+               `archivo:línea` y, si aplica, el scenario que se rompe. Tienes
+               un máximo de turnos y lo que no se publica se pierde.
             5. Cierra con un único comentario general con `gh pr comment`
-               que resuma la revisión.
+               que resuma la revisión, con las sugerencias que pasen del tope
+               de `REVIEW.md` contadas, no detalladas.
 
             No modifiques archivos ni hagas commits.
           claude_args: |

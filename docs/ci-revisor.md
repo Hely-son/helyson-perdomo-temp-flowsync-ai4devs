@@ -4,8 +4,8 @@
 [`anthropics/claude-code-action@v1`](https://github.com/anthropics/claude-code-action) en cada PR
 (al abrirlo, en cada push, al reabrirlo y al pasar de borrador a listo). El revisor lee el diff con
 `gh`, abre los archivos con Read, Grep y Glob y publica los hallazgos como comentarios en el PR: uno
-en línea por hallazgo y uno general de cierre. Sus criterios salen de
-[`.claude/agents/adversarial-reviewer.md`](../.claude/agents/adversarial-reviewer.md).
+en línea por hallazgo y uno general de cierre. Sus criterios salen de [`REVIEW.md`](../REVIEW.md),
+en la raíz: qué es grave, el tope de sugerencias, dónde no reportar y qué evidencia exigir.
 
 ## Pasos manuales pendientes
 
@@ -22,10 +22,9 @@ Nada de esto lo puede hacer un commit:
    mismo, y tampoco se revisa ningún PR posterior que lo modifique.
 4. **Comprobar que Actions puede ejecutar acciones de terceros** (`anthropics/*`, `actions/*`) si la
    organización lo restringe, en *Settings → Actions → General*.
-5. **Decidir si el revisor de CI tiene su propia calibración.** Hoy no hay un archivo específico: el
-   prompt apunta a `.claude/agents/adversarial-reviewer.md`. Si se quiere uno distinto, se crea y se
-   cambia el paso 1 del prompt. Y una advertencia: el checkout es el del PR, así que un PR que edite
-   ese archivo (o `CLAUDE.md`) cambia los criterios con los que se revisa a sí mismo.
+5. **Vigilar los PRs que tocan `REVIEW.md`.** El checkout es el del PR, así que un PR que edite
+   `REVIEW.md` (o `CLAUDE.md`) cambia los criterios con los que se revisa a sí mismo. Ese cambio lo
+   tiene que mirar una persona.
 
 ## En qué se va el dinero
 
