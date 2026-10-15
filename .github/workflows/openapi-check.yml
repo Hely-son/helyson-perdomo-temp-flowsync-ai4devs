@@ -1,0 +1,51 @@
+# Comprueba que docs/api/openapi.json dice lo mismo que el código. Solo
+# compara: si no coinciden, el job falla y explica la diferencia, pero no
+# regenera ni commitea nada.
+name: Contrato OpenAPI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Ningún permiso por defecto; el job pide solo el que necesita.
+permissions: {}
+
+jobs:
+  openapi-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Node
+        uses: actions/setup-node@v6
+        with:
+          # La versión con la que se ha verificado que `ace` arranca y genera
+          # el documento.
+          node-version: 26.4.0
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # Sin scripts de instalación: el documento no necesita los módulos
+      # nativos (better-sqlite3), y así no se ejecuta código de terceros.
+      - name: Dependencias
+        run: npm ci --ignore-scripts
+
+      # `start/env.ts` valida el entorno al arrancar `ace`. La clave es de
+      # usar y tirar: el job no cifra ni firma nada.
+      - name: Entorno
+        run: |
+          cp .env.example .env
+          node ace generate:key
+
+      - name: Comprobar el contrato
+        run: npm run openapi:check
