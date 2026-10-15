@@ -1,0 +1,65 @@
+# Revisor de código de Claude sobre cada PR. Pasos manuales pendientes, coste
+# y credenciales: docs/ci-revisor.md
+name: Revisor de Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+# Un push nuevo al PR cancela la revisión que siga en marcha sobre el anterior:
+# no se paga por revisar un diff que ya no existe.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Revisión
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Token de suscripción (`claude setup-token`). Para usar una clave de
+          # API de la consola, cambia la entrada y el secreto a la vez:
+          #   anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Eres el revisor de código de este PR.
+
+            1. Lee primero `.claude/agents/adversarial-reviewer.md`: son tus
+               criterios de revisión. Ignora su cabecera (`tools`, `model`):
+               aquí las herramientas y el modelo los fija el workflow.
+            2. Obtén el cambio con `gh pr view ${{ github.event.pull_request.number }}`
+               y `gh pr diff ${{ github.event.pull_request.number }}`, y lee su
+               salida directamente. No la redirijas a ficheros (`>`, `>>`,
+               `tee`) ni la encadenes con pipes: esos comandos no están
+               permitidos y cada intento denegado te cuesta un turno.
+            3. Abre con Read, Grep y Glob los archivos del cambio y los
+               scenarios de `openspec/specs/` contra los que contrastarlo.
+            4. Publica cada hallazgo en cuanto lo confirmes, como comentario en
+               línea con `mcp__github_inline_comment__create_inline_comment`
+               sobre la línea afectada: severidad (crítico/alto/medio),
+               evidencia y el scenario que se rompe. Tienes un máximo de turnos
+               y lo que no se publica se pierde.
+            5. Cierra con un único comentario general con `gh pr comment`
+               que resuma la revisión.
+
+            No modifiques archivos ni hagas commits.
+          claude_args: |
+            --model sonnet
+            --effort medium
+            --max-turns 40
+            --allowedTools "Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
