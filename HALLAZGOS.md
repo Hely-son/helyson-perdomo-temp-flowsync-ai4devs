@@ -1,26 +1,12 @@
-# Hallazgos
+# Hallazgos de la tarea
 
-Aquí van **las tres líneas** del ejercicio, una por cada punto de abajo. Es lo único que hay que
-traer hecho: un cambio de motor a medias con estas tres líneas escritas vale más que lo contrario,
-porque lo que se discute en el directo es dónde te chocaste.
+1. **Ubicación y valores de la pieza:**
+   - Aterrizó en: **dentro del catálogo**. La barra es `Progress` de shadcn, traída con `npx shadcn@latest add progress` a `frontend/src/components/ui/progress.tsx` (el catálogo pasa de 5 piezas a 6: `alert`, `button`, `card`, `input`, `label` + `progress`). La lógica (contar las `done` de lo visible y ponerlo en palabras) quedó fuera del catálogo, en `frontend/src/components/task-progress.tsx`, que compone esa pieza y la monta en `pages/tasks-page.tsx` justo encima del `<ul>`. Todo en la rama `interfaz-hp`: commit `86952b3` para la barra; el agente no creó otra rama porque `interfaz-hp` ya era de trabajo. Comprobado en la app real con Chrome headless: «19 de 19 · 100 %» con el filtro *Hecho* y «0 de 21 · 0 %» en la vista por defecto.
+   - Conteo de colores a pelo (en `frontend/src/` sin `index.css`; hex + `rgb()/hsl()/oklch()` + paleta cruda de Tailwind): había **1** antes (`text-white` en `ui/button.tsx`, 0 hex), **1** después del prompt 1 (la barra usa `bg-primary` y `bg-primary/20`, tokens de `index.css`, que sigue con 59 valores con nombre) y **3** después de la prueba del prompt 2 (2 × `#3b82f6` en `task-progress.tsx:32`, más el `text-white` de antes).
 
-Escribe **una sola línea por punto**, con tus palabras y con lo que mediste, no con lo que suponías.
+2. **Causa de la decisión del agente:**
+   - El prompt no nombraba el catálogo, pero el agente sí lo tenía delante: el `CLAUDE.md` del repo dice que hay shadcn/ui, que sus componentes viven en `src/components/ui/` y que se traen con `npx shadcn@latest add`; además `components.json` declara el alias `ui`, y `tasks-page.tsx` (el archivo que tenía que tocar) ya importa `Button`, `Alert`, `Input` y `Label` de `@/components/ui/`. Con eso, ir al catálogo y usar sus tokens era el camino obvio, no una deducción. Lo esperado al leer las lecciones («sin catálogo, el agente se inventa la pieza») no pasó porque el catálogo sí estaba nombrado, solo que en la memoria del proyecto y no en el prompt. Dos matices honestos: (a) el agente leyó el prompt 2, que habla de «de dónde deben extraerse las piezas», antes de ejecutar el 1, así que la pasada no fue ciega; (b) la pieza del catálogo no salió limpia: el CLI de shadcn resolvió mal `@/lib/utils`, escribió `import { cn } from "cn"` e instaló un paquete npm `cn` de terceros. Hubo que revertir `package.json`/`package-lock.json` y corregir el import. Eso salió en la build y en el diff, no en ningún guardarraíl.
 
-## 1. Las filas que cambian y la rama
-
-Cuántas filas cambian de valor en tu cambio de esquema, medido con una consulta, y en qué rama del
-árbol de reversibilidad cae. Si tu migración no toca datos, dilo tal cual: también es una respuesta.
-
--
-
-## 2. Lo que la batería de pruebas no podía ver
-
-Una cosa que la batería de pruebas no podía ver. Si no encontraste ninguna, escribe qué buscaste y dónde.
-
--
-
-## 3. Tu duda
-
-De qué dudaste, o qué no pudiste comprobar.
-
--
+3. **Alcance del guardarraíl:**
+   - Lo que avisó el script: `.claude/hooks/colores-a-pelo.sh` (PostToolUse sobre `Write|Edit`, registrado en `.claude/settings.json`) saltó en vivo al meter el azul y devolvió al agente `task-progress.tsx` línea 32 con `bg-[#3b82f6]/20 [&>[data-slot=progress-indicator]]:bg-[#3b82f6]`. Sin bloquear: la edición quedó escrita y la barra se pintó `rgb(59, 130, 246)` en la app. En la prueba manual también avisó del `text-white` que ya traía `ui/button.tsx`, calló en `index.css` (excluido) y en archivos de `backend/`.
+   - Lo que no pudo ver: si la pieza salió del catálogo o se dibujó de cero, si duplica una que ya existe, y si un token está bien elegido. Todo eso depende solo de la regla nueva de `CLAUDE.md` («De dónde sale una pieza de interfaz nueva»). Tampoco vio nada de lo que no entra por `Write`/`Edit`: lo que escribió `npx shadcn add` (el `progress.tsx` y la dependencia `cn` metida en `package.json`) pasó por Bash, así que el hook no se enteró. Tampoco caza colores armados en tiempo de ejecución (`` `bg-${c}-500` ``). Y quedaron fuera dos fallos de la pieza que no son de color: la `Progress` de shadcn no le pasa `value` al `Root` de Radix, así que el lector de pantalla no recibe `aria-valuenow` (comprobado: `null`), y la barra mide «lo que se está viendo», que con estos filtros (uno por estado, y la vista por defecto sin `done`) solo puede dar 0 % o 100 %.

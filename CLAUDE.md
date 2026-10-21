@@ -153,6 +153,16 @@ Organización de `src/`:
 - `routes/` — `app-routes.tsx` más los guards `protected-route.tsx` y `public-only-route.tsx`.
 - `pages/`, `components/` — pantallas y componentes propios.
 
+### De dónde sale una pieza de interfaz nueva
+
+Regla, no sugerencia. Antes de dibujar cualquier elemento de interfaz (botón, barra, aviso, tarjeta, campo, insignia…):
+
+1. **Primero, el catálogo: `src/components/ui/`.** Si ya hay una pieza que sirve, se usa con sus variantes y tamaños declarados (mira el `cva` de `button.tsx` antes de inventar un estilo de botón).
+2. **Si no está, se trae de shadcn/ui** con `npx shadcn@latest add <componente>`, que la deja en `src/components/ui/`. Se revisa el diff que deja el CLI (al añadir `progress` resolvió mal el alias de utils e instaló un paquete npm `cn` ajeno), pero la pieza en sí no se edita a mano.
+3. **Solo si shadcn no la tiene**, se escribe una pieza propia en `src/components/`, compuesta con las del catálogo y con los valores con nombre de `src/index.css`.
+
+Los componentes de `src/components/` (como `task-progress.tsx`) componen piezas del catálogo y ponen la lógica de la pantalla; no redibujan lo que ya existe. Los colores salen **siempre** de los tokens de `src/index.css` (`bg-primary`, `text-muted-foreground`, `border-border`…), nunca de hexadecimales ni de la paleta cruda de Tailwind (`bg-blue-600`). Si falta un color, se declara allí con nombre. El hook `PostToolUse` `.claude/hooks/colores-a-pelo.sh` avisa (sin bloquear) de los colores a pelo; lo que no puede ver —si la pieza salió del catálogo o se inventó— depende de esta regla.
+
 La URL de la API sale de `VITE_API_URL` (ver `frontend/.env.example`); por defecto `http://localhost:3333`.
 
 ## Reglas de proceso
