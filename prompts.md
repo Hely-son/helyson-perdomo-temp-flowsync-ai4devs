@@ -29,7 +29,7 @@ Borra el ejemplo de abajo cuando escribas el primero.
 Añade una barra de progreso sobre la pantalla de tareas, colocada justo encima del listado, que muestre de forma visual qué proporción de las tareas que se están viendo se encuentra actualmente en estado done. Hazlo en una sola pasada y asegúrate de cerrar tu trabajo con un commit según las normas del proyecto.
 ```
 
-**Qué salió:** funcionó a la primera, comprobado en la app (headless Chrome): trajo `Progress` de shadcn a `components/ui/` + `components/task-progress.tsx`; el CLI de shadcn metió un paquete npm `cn` ajeno y hubo que quitarlo; la barra mide lo visible, así que marca siempre 0 % o 100 % (commit `86952b3`).
+**Qué salió:** trajo `Progress` de shadcn a `components/ui/` + `components/task-progress.tsx`; el CLI de shadcn metió un paquete npm `cn` ajeno y hubo que quitarlo; la barra mide lo visible, así que marca siempre 0 % o 100 % (commit `3425ab8`).
 
 ## Prompt 2
 
@@ -45,3 +45,21 @@ Necesito añadir un mecanismo de control y una directriz para el repositorio:
 ```
 
 **Qué salió:** funcionó, comprobado: `.claude/hooks/migracion-con-vuelta.sh` no existe (se usó `sin-borrar-datos.sh` de modelo); el hook `colores-a-pelo.sh` saltó en vivo al meter `#3b82f6` (línea 32) sin bloquear, y la barra se pintó `rgb(59, 130, 246)` en la app.
+
+## Prompt 3
+
+**Modelo:** Opus 1M xHigh
+**Herramienta:** Claude Code
+
+```
+Corrige tres inconsistencias que quedaron tras la revisión del cambio:
+1. Corrige la falla de accesibilidad de la barra de progreso: quien usa lector de pantalla no se entera de qué porcentaje de tareas está hecho, porque la barra no anuncia su valor.
+2. Corrige la referencia al cambio en la documentación de la entrega: cita un commit que ya no existe desde que se juntó todo en uno solo.
+3. Corrige la contradicción en la regla de cómo se traen las piezas de interfaz nuevas: dice que no se tocan a mano, pero el propio cambio tuvo que arreglar a mano lo que llegó roto al instalarlas. La regla debe dejar claro cuándo sí se puede corregir.
+No hagas commit hasta que valide los cambios.
+```
+
+**Qué salió:** las tres corregidas y comprobadas, sin commit:
+1. Accesibilidad: corregida. La barra ahora anuncia su valor; en la app real (Chrome headless) el atributo `aria-valuenow` pasa de `null` a `0` en la vista por defecto y a `100` con el filtro *Hecho*, con `role="progressbar"`. Build y lint en verde.
+2. Referencia al commit: corregida. La documentación de la entrega ya no cita el commit desaparecido `86952b3` como referencia del cambio; ahora cita `3425ab8`, el commit único del PR.
+3. Regla contradictoria: corregida. Ahora dice que una pieza traída del catálogo no se rediseña ni se le cambia el estilo a mano, pero sí se corrige lo que llega roto (un import, una dependencia, un fallo de accesibilidad), con un comentario al lado y dicho en el commit; la corrección del punto 1 sigue esa misma regla.

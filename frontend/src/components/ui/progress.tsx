@@ -15,6 +15,9 @@ function Progress({
         'relative h-2 w-full overflow-hidden rounded-full bg-primary/20',
         className,
       )}
+      // shadcn lo desestructura para el Indicator y no se lo pasaba a Radix:
+      // sin él, la barra se anuncia como indeterminada y sin aria-valuenow.
+      value={value}
       {...props}
     >
       <ProgressPrimitive.Indicator
